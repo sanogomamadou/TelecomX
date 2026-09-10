@@ -1,0 +1,258 @@
+{
+  "type": "record",
+  "name": "EquipmentTelemetry",
+  "namespace": "com.telecomx.infrastructure.v1",
+  "doc": "Télémétrie des équipements d'infrastructure (BBU, routeurs, alimentation, climatisation, groupes électrogènes). Source unique du modèle de maintenance prédictive.",
+  "telecomx.owner": "field-operations",
+  "telecomx.topic": "device.events",
+  "telecomx.partition_key": "equipment_id",
+  "telecomx.sla_freshness_seconds": 300,
+  "telecomx.compatibility": "BACKWARD",
+  "telecomx.classification": "P4",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "telecomx.constraint": "unique"
+    },
+    {
+      "name": "event_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      },
+      "telecomx.constraint": "not_null,not_future"
+    },
+    {
+      "name": "ingestion_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0"
+    },
+    {
+      "name": "producer_id",
+      "type": "string"
+    },
+    {
+      "name": "tenant_id",
+      "type": "string",
+      "telecomx.constraint": "not_null,in_ref:tenants"
+    },
+    {
+      "name": "equipment_id",
+      "type": "string",
+      "doc": "Identifiant d'équipement (ex. ROUTER-082, BBU-014, GENSET-201).",
+      "telecomx.constraint": "not_null,in_ref:equipment"
+    },
+    {
+      "name": "site_id",
+      "type": "string",
+      "doc": "Site hébergeant l'équipement.",
+      "telecomx.constraint": "not_null,in_ref:sites"
+    },
+    {
+      "name": "equipment_type",
+      "type": {
+        "type": "enum",
+        "name": "EquipmentType",
+        "symbols": [
+          "BBU",
+          "RRU",
+          "ROUTER",
+          "SWITCH",
+          "POWER_SUPPLY",
+          "BATTERY",
+          "GENSET",
+          "HVAC",
+          "MICROWAVE_LINK",
+          "FIBER_TERMINAL"
+        ]
+      },
+      "doc": "Catégorie d'équipement. Détermine le profil de défaillance attendu."
+    },
+    {
+      "name": "vendor",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Constructeur. Certains modèles ont des profils de défaillance spécifiques."
+    },
+    {
+      "name": "model",
+      "type": [
+        "null",
+        "string"
+      ],
+      "doc": "Référence du modèle. Certains modèles présentent des défaillances caractéristiques.",
+      "default": null
+    },
+    {
+      "name": "temperature_celsius",
+      "type": [
+        "null",
+        "double"
+      ],
+      "default": null,
+      "doc": "Température interne. Prédicteur de panne le plus fort, surtout combiné à une défaillance de climatisation.",
+      "telecomx.unit": "celsius",
+      "telecomx.constraint": "gte:-20,lte:120"
+    },
+    {
+      "name": "cpu_utilization_pct",
+      "type": [
+        "null",
+        "double"
+      ],
+      "doc": "Taux d'occupation processeur. Une saturation prolongée précède souvent une dégradation de service.",
+      "default": null,
+      "telecomx.unit": "percent",
+      "telecomx.constraint": "gte:0,lte:100"
+    },
+    {
+      "name": "memory_utilization_pct",
+      "type": [
+        "null",
+        "double"
+      ],
+      "doc": "Taux d'occupation mémoire. Une croissance monotone signale une fuite mémoire.",
+      "default": null,
+      "telecomx.unit": "percent",
+      "telecomx.constraint": "gte:0,lte:100"
+    },
+    {
+      "name": "uptime_seconds",
+      "type": "long",
+      "doc": "Durée depuis le dernier redémarrage. Une remise à zéro inattendue signale un redémarrage non planifié.",
+      "telecomx.unit": "second",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "power_consumption_watts",
+      "type": [
+        "null",
+        "double"
+      ],
+      "doc": "Consommation électrique instantanée. Une dérive est un indicateur d'usure.",
+      "default": null,
+      "telecomx.unit": "watt",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "input_voltage",
+      "type": [
+        "null",
+        "double"
+      ],
+      "default": null,
+      "doc": "Tension d'alimentation. Les instabilités électriques sont une cause majeure de panne.",
+      "telecomx.unit": "volt",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "battery_level_pct",
+      "type": [
+        "null",
+        "double"
+      ],
+      "default": null,
+      "doc": "Niveau de batterie de secours.",
+      "telecomx.unit": "percent",
+      "telecomx.constraint": "gte:0,lte:100"
+    },
+    {
+      "name": "battery_cycles",
+      "type": [
+        "null",
+        "int"
+      ],
+      "default": null,
+      "doc": "Nombre de cycles de charge/décharge. Indicateur d'usure.",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "crc_error_count",
+      "type": [
+        "null",
+        "long"
+      ],
+      "default": null,
+      "doc": "Erreurs CRC sur les interfaces transport. Une croissance progressive annonce une dégradation de lien (fibre, faisceau hertzien).",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "packet_error_rate",
+      "type": [
+        "null",
+        "double"
+      ],
+      "doc": "Taux d'erreur paquets sur les interfaces.",
+      "default": null,
+      "telecomx.unit": "percent",
+      "telecomx.constraint": "gte:0,lte:100"
+    },
+    {
+      "name": "link_utilization_pct",
+      "type": [
+        "null",
+        "double"
+      ],
+      "default": null,
+      "doc": "Taux d'occupation du lien de transport. Une saturation du backhaul se manifeste ici avant de dégrader les KPI radio — signal clé de l'analyse de cause racine.",
+      "telecomx.unit": "percent",
+      "telecomx.constraint": "gte:0,lte:100"
+    },
+    {
+      "name": "fan_status",
+      "type": [
+        "null",
+        {
+          "type": "enum",
+          "name": "FanStatus",
+          "symbols": [
+            "OK",
+            "DEGRADED",
+            "FAILED",
+            "NOT_APPLICABLE"
+          ]
+        }
+      ],
+      "doc": "État de la ventilation. Une ventilation dégradée combinée à une température élevée est le scénario de panne le plus fréquent.",
+      "default": null
+    },
+    {
+      "name": "operational_status",
+      "type": {
+        "type": "enum",
+        "name": "OperationalStatus",
+        "symbols": [
+          "NORMAL",
+          "DEGRADED",
+          "MAINTENANCE",
+          "FAULT",
+          "OFFLINE"
+        ]
+      },
+      "doc": "État opérationnel déclaré par l'équipement.",
+      "default": "NORMAL"
+    },
+    {
+      "name": "days_since_maintenance",
+      "type": [
+        "null",
+        "int"
+      ],
+      "default": null,
+      "doc": "Jours écoulés depuis la dernière intervention. Feature directe du modèle de maintenance prédictive.",
+      "telecomx.constraint": "gte:0",
+      "telecomx.unit": "day"
+    }
+  ]
+}

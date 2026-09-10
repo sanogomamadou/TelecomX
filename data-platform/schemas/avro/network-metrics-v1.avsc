@@ -1,0 +1,146 @@
+{
+  "type": "record",
+  "name": "NetworkMetrics",
+  "namespace": "com.telecomx.network.v1",
+  "doc": "Métriques de performance radio agrégées par cellule sur une fenêtre glissante de 60 secondes. Produit par l'EMS radio via l'adaptateur d'ingestion.",
+  "telecomx.owner": "network-operations",
+  "telecomx.topic": "network.metrics",
+  "telecomx.partition_key": "cell_id",
+  "telecomx.sla_freshness_seconds": 120,
+  "telecomx.compatibility": "BACKWARD",
+  "telecomx.classification": "P4",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "doc": "UUID v7 unique. Clé de déduplication (FR-M2-003).",
+      "telecomx.pii": "none",
+      "telecomx.constraint": "unique"
+    },
+    {
+      "name": "event_timestamp",
+      "type": { "type": "long", "logicalType": "timestamp-micros" },
+      "doc": "Instant de fin de la fenêtre de mesure, en UTC. Base du partitionnement et du watermarking.",
+      "telecomx.pii": "none",
+      "telecomx.constraint": "not_null,not_future"
+    },
+    {
+      "name": "ingestion_timestamp",
+      "type": { "type": "long", "logicalType": "timestamp-micros" },
+      "doc": "Instant d'entrée dans la plateforme, en UTC. Sert au calcul de fraîcheur.",
+      "telecomx.pii": "none"
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0",
+      "doc": "Version sémantique du contrat, portée par l'événement pour faciliter le débogage."
+    },
+    {
+      "name": "producer_id",
+      "type": "string",
+      "doc": "Identifiant du système ou de l'adaptateur émetteur (ex. ems-radio-bamako-01)."
+    },
+    {
+      "name": "tenant_id",
+      "type": "string",
+      "doc": "Identifiant du tenant. OBLIGATOIRE — un message sans tenant est rejeté en DLQ (ADR-016).",
+      "telecomx.constraint": "not_null,in_ref:tenants"
+    },
+    {
+      "name": "cell_id",
+      "type": "string",
+      "doc": "Identifiant de cellule au format CELL-NNNN.",
+      "telecomx.pii": "none",
+      "telecomx.constraint": "not_null,pattern:^CELL-[0-9]{4}$,in_ref:cells"
+    },
+    {
+      "name": "site_id",
+      "type": "string",
+      "doc": "Site hébergeant la cellule, au format SITE-NNN.",
+      "telecomx.constraint": "not_null,pattern:^SITE-[0-9]{3,4}$,in_ref:sites"
+    },
+    {
+      "name": "region",
+      "type": "string",
+      "doc": "Région administrative. Dimension de partitionnement en silver.",
+      "telecomx.constraint": "not_null,in_ref:regions"
+    },
+    {
+      "name": "technology",
+      "type": { "type": "enum", "name": "Technology", "symbols": ["G2", "G3", "G4", "G5"] },
+      "doc": "Technologie radio. Préfixe G car un symbole Avro ne peut pas commencer par un chiffre."
+    },
+    {
+      "name": "traffic_mb",
+      "type": "double",
+      "doc": "Volume de données échangées durant la fenêtre.",
+      "telecomx.unit": "megabyte",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "active_users",
+      "type": "int",
+      "doc": "Nombre d'utilisateurs simultanément rattachés à la cellule.",
+      "telecomx.unit": "count",
+      "telecomx.constraint": "gte:0,lte_ref:cells.capacity_users"
+    },
+    {
+      "name": "latency_ms",
+      "type": "double",
+      "doc": "Latence aller-retour moyenne observée.",
+      "telecomx.unit": "millisecond",
+      "telecomx.constraint": "gte:0,lte:5000"
+    },
+    {
+      "name": "packet_loss_pct",
+      "type": "double",
+      "doc": "Taux de perte de paquets.",
+      "telecomx.unit": "percent",
+      "telecomx.constraint": "gte:0,lte:100"
+    },
+    {
+      "name": "drop_rate_pct",
+      "type": "double",
+      "doc": "Taux d'appels interrompus (Call Drop Rate).",
+      "telecomx.unit": "percent",
+      "telecomx.constraint": "gte:0,lte:100"
+    },
+    {
+      "name": "call_setup_failure_pct",
+      "type": "double",
+      "doc": "Taux d'échec d'établissement d'appel.",
+      "telecomx.unit": "percent",
+      "telecomx.constraint": "gte:0,lte:100"
+    },
+    {
+      "name": "throughput_mbps",
+      "type": "double",
+      "doc": "Débit utile moyen par utilisateur.",
+      "telecomx.unit": "megabit_per_second",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "signal_strength_dbm",
+      "type": "double",
+      "doc": "Puissance de signal moyenne reçue (RSRP en 4G/5G, RSCP en 3G).",
+      "telecomx.unit": "dbm",
+      "telecomx.constraint": "gte:-140,lte:-40"
+    },
+    {
+      "name": "prb_utilization_pct",
+      "type": "double",
+      "doc": "Taux d'occupation des Physical Resource Blocks. Indicateur principal de saturation radio.",
+      "telecomx.unit": "percent",
+      "telecomx.constraint": "gte:0,lte:100"
+    },
+    {
+      "name": "availability_pct",
+      "type": "double",
+      "default": 100.0,
+      "doc": "Disponibilité de la cellule sur la fenêtre.",
+      "telecomx.unit": "percent",
+      "telecomx.constraint": "gte:0,lte:100"
+    }
+  ]
+}

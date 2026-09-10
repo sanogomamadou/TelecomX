@@ -1,0 +1,181 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to keep CI under the 15 min budget
+# (NFR-MAINT-007).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Detect which parts of the monorepo changed, so that unrelated jobs are
+  # skipped. This is what keeps a monorepo's CI fast (ADR-001, C5).
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      contracts: ${{ steps.filter.outputs.contracts }}
+      python: ${{ steps.filter.outputs.python }}
+      docs: ${{ steps.filter.outputs.docs }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            contracts:
+              - 'data-platform/schemas/**'
+              - 'scripts/validate_contracts.py'
+            python:
+              - '**/*.py'
+              - 'pyproject.toml'
+              - '.importlinter'
+            docs:
+              - 'docs/**'
+              - '*.md'
+            frontend:
+              - 'apps/frontend/**'
+
+  # ---------------------------------------------------------------------------
+  # Data contracts are the foundation of the platform (ADR-015): they are
+  # validated on every run, even when nothing else changed.
+  # ---------------------------------------------------------------------------
+  contracts:
+    name: Data contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install validation dependencies
+        run: python -m pip install --quiet fastavro
+      - name: Validate Avro contracts
+        run: python scripts/validate_contracts.py
+
+  # ---------------------------------------------------------------------------
+  # Secret scanning runs unconditionally — a leaked secret is never "unrelated".
+  # ---------------------------------------------------------------------------
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  lint:
+    name: Lint & format
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --dev
+      - name: Ruff lint
+        run: uv run ruff check --output-format=github .
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+  typecheck:
+    name: Type check
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --dev
+      - name: Mypy
+        run: uv run mypy libs apps agents ml-platform
+
+  architecture:
+    name: Architecture rules
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --dev
+      - name: Enforce import contracts (ADR-001, ADR-009, ADR-016)
+        run: uv run lint-imports
+
+  test:
+    name: Unit tests
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --dev
+      - name: Run unit tests
+        run: uv run pytest -m "not integration and not e2e and not llm" --cov --cov-report=xml
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+          if-no-files-found: ignore
+
+  dependencies:
+    name: Dependency audit
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - name: Audit Python dependencies
+        run: uvx pip-audit --strict || echo "::warning::pip-audit reported findings"
+
+  # ---------------------------------------------------------------------------
+  # Single required status check — branch protection points at this one job.
+  # ---------------------------------------------------------------------------
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs: [contracts, secrets, lint, typecheck, architecture, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any required job failed
+        run: |
+          results='${{ join(needs.*.result, ' ') }}'
+          echo "Job results: $results"
+          for r in $results; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
+              echo "::error::At least one required job did not pass."
+              exit 1
+            fi
+          done
+          echo "All required jobs passed or were skipped."

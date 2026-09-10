@@ -1,0 +1,135 @@
+[project]
+name = "telecomx-platform"
+version = "0.1.0"
+description = "TelecomX Intelligence & Autonomous Operations Platform"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Mamadou Sanogo" }]
+
+# The root project is a workspace container only; runtime dependencies live in
+# each member's own pyproject.toml (see [tool.uv.workspace] below).
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "import-linter>=2.1",
+    "pre-commit>=4.0",
+    "fastavro>=1.9",
+]
+
+[tool.uv.workspace]
+members = [
+    "libs/telecom-common",
+    "data-platform/generators",
+    "data-platform/spark",
+    "ml-platform",
+    "agents",
+    "apps/api",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff — lint + format (replaces flake8, black, isort, pyupgrade, bandit)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["*.ipynb", "data-platform/dbt/target", ".venv"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "N",         # pep8-naming
+    "UP",        # pyupgrade
+    "B",         # bugbear
+    "A",         # builtin shadowing
+    "C4",        # comprehensions
+    "DTZ",       # flake8-datetimez — timezone-aware datetimes are mandatory here
+    "T20",       # no print()
+    "SIM",       # simplify
+    "ARG",       # unused arguments
+    "PTH",       # use pathlib
+    "PD",        # pandas idioms
+    "RUF",       # ruff-specific
+    "S",         # bandit security rules
+    "ASYNC",     # async pitfalls
+]
+ignore = [
+    "E501",      # line length handled by the formatter
+    "B008",      # FastAPI Depends() in defaults is idiomatic
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "ARG", "PLR2004"]        # assert / fixtures / magic values
+"scripts/**" = ["T20"]                          # scripts legitimately print
+"**/conftest.py" = ["ARG"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["telecom_common", "agents", "ml_platform"]
+
+[tool.ruff.format]
+quote-style = "double"
+docstring-code-format = true
+
+# ---------------------------------------------------------------------------
+# Mypy — strict on shared libs, standard elsewhere (see ADR-014)
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+namespace_packages = true
+
+[[tool.mypy.overrides]]
+module = "telecom_common.*"
+strict = true
+
+[[tool.mypy.overrides]]
+# Third-party packages without bundled type stubs.
+module = ["pyspark.*", "confluent_kafka.*", "lightgbm.*", "xgboost.*", "mlflow.*", "qdrant_client.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+]
+markers = [
+    "unit: fast, no external dependency",
+    "integration: requires running docker services",
+    "e2e: full end-to-end scenario",
+    "slow: takes more than 5 seconds",
+    "spark: requires a local SparkSession",
+    "llm: performs a real LLM call (skipped by default in CI)",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["libs", "apps", "agents", "ml-platform", "data-platform"]
+omit = ["*/tests/*", "*/conftest.py", "*/__init__.py"]
+
+[tool.coverage.report]
+precision = 1
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

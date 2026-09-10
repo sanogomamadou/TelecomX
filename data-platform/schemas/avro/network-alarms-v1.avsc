@@ -1,0 +1,195 @@
+{
+  "type": "record",
+  "name": "NetworkAlarm",
+  "namespace": "com.telecomx.network.v1",
+  "doc": "Alarme émise par un équipement réseau ou par la plateforme elle-même (anomalie détectée par ML). Topic à faible débit mais forte valeur : rétention 30 jours.",
+  "telecomx.owner": "network-operations",
+  "telecomx.topic": "network.alarms",
+  "telecomx.partition_key": "site_id",
+  "telecomx.sla_freshness_seconds": 60,
+  "telecomx.compatibility": "FULL",
+  "telecomx.classification": "P4",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "telecomx.constraint": "unique"
+    },
+    {
+      "name": "event_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      },
+      "doc": "Instant de déclenchement de l'alarme, en UTC.",
+      "telecomx.constraint": "not_null,not_future"
+    },
+    {
+      "name": "ingestion_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0"
+    },
+    {
+      "name": "producer_id",
+      "type": "string"
+    },
+    {
+      "name": "tenant_id",
+      "type": "string",
+      "telecomx.constraint": "not_null,in_ref:tenants"
+    },
+    {
+      "name": "alarm_id",
+      "type": "string",
+      "doc": "Identifiant unique de l'occurrence d'alarme, au format ALM-YYYYMMDD-NNNNNN."
+    },
+    {
+      "name": "alarm_code",
+      "type": "string",
+      "doc": "Code normalisé du type d'alarme (ex. TRX_FAILURE, BACKHAUL_CONGESTION, VSWR_HIGH).",
+      "telecomx.constraint": "not_null,in_ref:alarm_types"
+    },
+    {
+      "name": "severity",
+      "type": {
+        "type": "enum",
+        "name": "AlarmSeverity",
+        "symbols": [
+          "CRITICAL",
+          "MAJOR",
+          "MINOR",
+          "WARNING",
+          "INFO"
+        ]
+      },
+      "doc": "Sévérité selon la nomenclature ITU-T X.733."
+    },
+    {
+      "name": "domain",
+      "type": {
+        "type": "enum",
+        "name": "AlarmDomain",
+        "symbols": [
+          "RADIO",
+          "TRANSPORT",
+          "CORE",
+          "POWER",
+          "ENVIRONMENT",
+          "PLATFORM"
+        ]
+      },
+      "doc": "Domaine technique concerné. Détermine l'équipe de traitement et la procédure applicable."
+    },
+    {
+      "name": "site_id",
+      "type": "string",
+      "doc": "Site concerné par l'alarme.",
+      "telecomx.constraint": "not_null,in_ref:sites"
+    },
+    {
+      "name": "cell_id",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Cellule concernée si l'alarme est de portée cellulaire. Nul pour une alarme de site ou d'équipement."
+    },
+    {
+      "name": "equipment_id",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Équipement concerné si identifiable (ex. ROUTER-082, BBU-014)."
+    },
+    {
+      "name": "region",
+      "type": "string",
+      "doc": "Région du site. Permet l'agrégation géographique des incidents.",
+      "telecomx.constraint": "not_null,in_ref:regions"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "doc": "Libellé textuel de l'alarme. ATTENTION : champ de texte libre provenant d'un système externe — traité comme donnée NON FIABLE et jamais interpolé dans la zone d'instructions d'un prompt (voir threat model §5.2)."
+    },
+    {
+      "name": "probable_cause",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Cause probable déclarée par l'équipement, selon la nomenclature constructeur."
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "AlarmStatus",
+        "symbols": [
+          "ACTIVE",
+          "ACKNOWLEDGED",
+          "CLEARED"
+        ]
+      },
+      "doc": "État courant de l'alarme dans son cycle de vie.",
+      "default": "ACTIVE"
+    },
+    {
+      "name": "cleared_timestamp",
+      "type": [
+        "null",
+        {
+          "type": "long",
+          "logicalType": "timestamp-micros"
+        }
+      ],
+      "default": null,
+      "doc": "Instant de résolution, en UTC. Permet de calculer la durée de l'alarme."
+    },
+    {
+      "name": "source",
+      "type": {
+        "type": "enum",
+        "name": "AlarmSource",
+        "symbols": [
+          "EMS",
+          "ANOMALY_DETECTION",
+          "MANUAL",
+          "THRESHOLD"
+        ]
+      },
+      "default": "EMS",
+      "doc": "Origine de l'alarme. ANOMALY_DETECTION identifie les alarmes générées par le modèle ML de la plateforme — c'est ce qui déclenche l'Operations Agent."
+    },
+    {
+      "name": "anomaly_score",
+      "type": [
+        "null",
+        "double"
+      ],
+      "default": null,
+      "doc": "Score d'anomalie [0,1] lorsque source = ANOMALY_DETECTION.",
+      "telecomx.constraint": "gte:0,lte:1"
+    },
+    {
+      "name": "correlation_id",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Regroupe les alarmes issues d'une même cause racine (une panne de site en génère des dizaines)."
+    }
+  ]
+}

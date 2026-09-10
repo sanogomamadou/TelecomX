@@ -1,0 +1,211 @@
+{
+  "type": "record",
+  "name": "CustomerEvent",
+  "namespace": "com.telecomx.crm.v1",
+  "doc": "Événement de relation client issu du CRM : réclamations, changements d'offre, interactions support, résiliation. Source de la variable cible du modèle de churn.",
+  "telecomx.owner": "crm",
+  "telecomx.topic": "customer.events",
+  "telecomx.partition_key": "subscriber_id",
+  "telecomx.sla_freshness_seconds": 600,
+  "telecomx.compatibility": "BACKWARD",
+  "telecomx.classification": "P1",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "telecomx.constraint": "unique"
+    },
+    {
+      "name": "event_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      },
+      "telecomx.constraint": "not_null,not_future"
+    },
+    {
+      "name": "ingestion_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0"
+    },
+    {
+      "name": "producer_id",
+      "type": "string"
+    },
+    {
+      "name": "tenant_id",
+      "type": "string",
+      "telecomx.constraint": "not_null,in_ref:tenants"
+    },
+    {
+      "name": "subscriber_id",
+      "type": "string",
+      "doc": "MSISDN de l'abonné concerné. IDENTIFIANT DIRECT — tokenisé en subscriber_token.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "subscriber_token",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "event_type",
+      "type": {
+        "type": "enum",
+        "name": "CustomerEventType",
+        "symbols": [
+          "ACTIVATION",
+          "COMPLAINT",
+          "SUPPORT_CONTACT",
+          "PLAN_CHANGE",
+          "SIM_SWAP",
+          "DEVICE_CHANGE",
+          "SUSPENSION",
+          "REACTIVATION",
+          "CHURN",
+          "PORT_OUT_REQUEST",
+          "SATISFACTION_SURVEY"
+        ]
+      },
+      "doc": "CHURN et PORT_OUT_REQUEST constituent la variable cible du modèle de churn. SIM_SWAP est un signal de fraude majeur (prise de contrôle de compte)."
+    },
+    {
+      "name": "channel",
+      "type": [
+        "null",
+        {
+          "type": "enum",
+          "name": "CustomerChannel",
+          "symbols": [
+            "CALL_CENTER",
+            "SHOP",
+            "APP",
+            "USSD",
+            "SMS",
+            "SOCIAL",
+            "WEB"
+          ]
+        }
+      ],
+      "doc": "Canal par lequel l'interaction a eu lieu.",
+      "default": null
+    },
+    {
+      "name": "category",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Catégorie normalisée (NETWORK_QUALITY, BILLING, BUNDLE, MOBILE_MONEY, DEVICE, OTHER). NETWORK_QUALITY permet de corréler les réclamations aux dégradations réseau — clé de l'analyse de cause racine du churn."
+    },
+    {
+      "name": "description",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Texte libre saisi par l'agent. DONNÉE NON FIABLE : traitée comme contenu à analyser, jamais comme instruction (threat model §5.2). Peut contenir des PII saisies manuellement — scannée et masquée en silver."
+    },
+    {
+      "name": "severity",
+      "type": [
+        "null",
+        {
+          "type": "enum",
+          "name": "ComplaintSeverity",
+          "symbols": [
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "CRITICAL"
+          ]
+        }
+      ],
+      "doc": "Gravité déclarée de la réclamation.",
+      "default": null
+    },
+    {
+      "name": "resolution_status",
+      "type": [
+        "null",
+        {
+          "type": "enum",
+          "name": "ResolutionStatus",
+          "symbols": [
+            "OPEN",
+            "IN_PROGRESS",
+            "RESOLVED",
+            "ESCALATED",
+            "CLOSED_UNRESOLVED"
+          ]
+        }
+      ],
+      "doc": "État de traitement. CLOSED_UNRESOLVED est un signal de churn particulièrement fort.",
+      "default": null
+    },
+    {
+      "name": "resolution_time_minutes",
+      "type": [
+        "null",
+        "int"
+      ],
+      "doc": "Délai de résolution. Un délai long dégrade la satisfaction.",
+      "default": null,
+      "telecomx.unit": "minute",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "satisfaction_score",
+      "type": [
+        "null",
+        "int"
+      ],
+      "default": null,
+      "doc": "Score NPS ou CSAT recueilli.",
+      "telecomx.constraint": "gte:0,lte:10"
+    },
+    {
+      "name": "related_cell_id",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Cellule mise en cause dans une réclamation de qualité réseau. Relie directement le ressenti client à la performance technique."
+    },
+    {
+      "name": "region",
+      "type": [
+        "null",
+        "string"
+      ],
+      "doc": "Région de rattachement de l'abonné.",
+      "default": null,
+      "telecomx.constraint": "in_ref:regions"
+    },
+    {
+      "name": "previous_plan",
+      "type": [
+        "null",
+        "string"
+      ],
+      "doc": "Offre précédente lors d'un changement de plan.",
+      "default": null
+    },
+    {
+      "name": "new_plan",
+      "type": [
+        "null",
+        "string"
+      ],
+      "doc": "Nouvelle offre lors d'un changement de plan. Un passage vers une offre inférieure précède souvent une résiliation.",
+      "default": null
+    }
+  ]
+}

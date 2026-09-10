@@ -1,0 +1,184 @@
+{
+  "type": "record",
+  "name": "BundleEvent",
+  "namespace": "com.telecomx.billing.v1",
+  "doc": "Cycle de vie d'un forfait (achat, activation, consommation, expiration). Le taux d'utilisation d'un forfait est un signal de churn : un abonné qui n'épuise plus ses bundles se désengage.",
+  "telecomx.owner": "billing",
+  "telecomx.topic": "bundle.events",
+  "telecomx.partition_key": "subscriber_id",
+  "telecomx.sla_freshness_seconds": 300,
+  "telecomx.compatibility": "BACKWARD",
+  "telecomx.classification": "P1",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "telecomx.constraint": "unique"
+    },
+    {
+      "name": "event_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      },
+      "telecomx.constraint": "not_null,not_future"
+    },
+    {
+      "name": "ingestion_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0"
+    },
+    {
+      "name": "producer_id",
+      "type": "string"
+    },
+    {
+      "name": "tenant_id",
+      "type": "string",
+      "telecomx.constraint": "not_null,in_ref:tenants"
+    },
+    {
+      "name": "subscriber_id",
+      "type": "string",
+      "doc": "MSISDN de l'abonné. IDENTIFIANT DIRECT — tokenisé en subscriber_token.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "subscriber_token",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "bundle_code",
+      "type": "string",
+      "doc": "Code du forfait (ex. DATA-10GB, VOICE-100MIN).",
+      "telecomx.constraint": "not_null,in_ref:bundles"
+    },
+    {
+      "name": "event_type",
+      "type": {
+        "type": "enum",
+        "name": "BundleEventType",
+        "symbols": [
+          "PURCHASED",
+          "ACTIVATED",
+          "CONSUMED",
+          "EXPIRED",
+          "RENEWED",
+          "CANCELLED"
+        ]
+      },
+      "doc": "Étape du cycle de vie du forfait. EXPIRED avec un consumed_mb faible révèle un forfait gaspillé."
+    },
+    {
+      "name": "bundle_type",
+      "type": {
+        "type": "enum",
+        "name": "BundleType",
+        "symbols": [
+          "DATA",
+          "VOICE",
+          "SMS",
+          "MIXED",
+          "SOCIAL"
+        ]
+      },
+      "doc": "Nature du forfait. SOCIAL désigne les offres limitées à certaines applications."
+    },
+    {
+      "name": "price",
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "precision": 18,
+        "scale": 2
+      },
+      "doc": "Prix payé par l'abonné.",
+      "telecomx.unit": "xof",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "allowance_mb",
+      "type": [
+        "null",
+        "double"
+      ],
+      "default": null,
+      "doc": "Volume data inclus.",
+      "telecomx.unit": "megabyte",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "allowance_minutes",
+      "type": [
+        "null",
+        "int"
+      ],
+      "doc": "Minutes de voix incluses.",
+      "default": null,
+      "telecomx.unit": "minute",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "consumed_mb",
+      "type": [
+        "null",
+        "double"
+      ],
+      "default": null,
+      "doc": "Volume consommé à l'instant de l'événement. Sur EXPIRED, révèle le gaspillage — signal d'insatisfaction tarifaire.",
+      "telecomx.unit": "megabyte",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "validity_days",
+      "type": "int",
+      "doc": "Durée de validité du forfait à compter de l'activation.",
+      "default": 30,
+      "telecomx.constraint": "gte:0",
+      "telecomx.unit": "day"
+    },
+    {
+      "name": "expiry_timestamp",
+      "type": [
+        "null",
+        {
+          "type": "long",
+          "logicalType": "timestamp-micros"
+        }
+      ],
+      "doc": "Instant d'expiration du forfait, en UTC.",
+      "default": null
+    },
+    {
+      "name": "purchase_channel",
+      "type": [
+        "null",
+        {
+          "type": "enum",
+          "name": "BundleChannel",
+          "symbols": [
+            "USSD",
+            "APP",
+            "AGENT",
+            "WEB",
+            "AUTO_RENEWAL",
+            "SMS"
+          ]
+        }
+      ],
+      "doc": "Canal d'achat. AUTO_RENEWAL identifie les reconductions automatiques.",
+      "default": null
+    },
+    {
+      "name": "is_auto_renew",
+      "type": "boolean",
+      "doc": "Forfait souscrit avec reconduction automatique. Réduit fortement le risque de churn.",
+      "default": false
+    }
+  ]
+}

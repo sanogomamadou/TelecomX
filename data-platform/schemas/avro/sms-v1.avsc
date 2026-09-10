@@ -1,0 +1,143 @@
+{
+  "type": "record",
+  "name": "SmsEvent",
+  "namespace": "com.telecomx.messaging.v1",
+  "doc": "Métadonnées d'un SMS. Le CONTENU du message n'est JAMAIS collecté (secret des correspondances) — seules les métadonnées le sont. Topic soumis à des pics extrêmes (×28 au Nouvel An).",
+  "telecomx.owner": "oss-mediation",
+  "telecomx.topic": "sms.events",
+  "telecomx.partition_key": "sender_id",
+  "telecomx.sla_freshness_seconds": 300,
+  "telecomx.compatibility": "BACKWARD",
+  "telecomx.classification": "P1",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "telecomx.constraint": "unique"
+    },
+    {
+      "name": "event_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      },
+      "telecomx.constraint": "not_null,not_future"
+    },
+    {
+      "name": "ingestion_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0"
+    },
+    {
+      "name": "producer_id",
+      "type": "string"
+    },
+    {
+      "name": "tenant_id",
+      "type": "string",
+      "telecomx.constraint": "not_null,in_ref:tenants"
+    },
+    {
+      "name": "message_id",
+      "type": "string",
+      "doc": "Identifiant technique du message. Le CONTENU n'est jamais collecté.",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "sender_id",
+      "type": "string",
+      "doc": "MSISDN de l'émetteur, ou nom court pour un SMS applicatif. IDENTIFIANT DIRECT — tokenisé.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "subscriber_token",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "receiver_id",
+      "type": "string",
+      "doc": "MSISDN du destinataire. IDENTIFIANT DIRECT — tokenisé.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "receiver_token",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "cell_id",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Cellule d'émission."
+    },
+    {
+      "name": "direction",
+      "type": {
+        "type": "enum",
+        "name": "SmsDirection",
+        "symbols": [
+          "MO",
+          "MT"
+        ]
+      },
+      "doc": "MO = envoyé par l'abonné, MT = reçu par l'abonné."
+    },
+    {
+      "name": "sms_type",
+      "type": {
+        "type": "enum",
+        "name": "SmsType",
+        "symbols": [
+          "P2P",
+          "A2P",
+          "PROMOTIONAL",
+          "OTP",
+          "SYSTEM"
+        ]
+      },
+      "default": "P2P",
+      "doc": "A2P (application-to-person) et OTP sont exclus des analyses d'usage personnel."
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "SmsStatus",
+        "symbols": [
+          "DELIVERED",
+          "FAILED",
+          "PENDING",
+          "EXPIRED",
+          "REJECTED"
+        ]
+      },
+      "doc": "Statut de remise du message."
+    },
+    {
+      "name": "segment_count",
+      "type": "int",
+      "default": 1,
+      "doc": "Nombre de segments (un SMS long est découpé). Sert à la facturation.",
+      "telecomx.constraint": "gte:1,lte:10"
+    },
+    {
+      "name": "charged_amount",
+      "type": "double",
+      "doc": "Montant facturé pour l'envoi.",
+      "default": 0.0,
+      "telecomx.unit": "xof",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "is_international",
+      "type": "boolean",
+      "doc": "Message à destination de l'international.",
+      "default": false
+    }
+  ]
+}

@@ -1,0 +1,145 @@
+{
+  "type": "record",
+  "name": "RechargeEvent",
+  "namespace": "com.telecomx.billing.v1",
+  "doc": "Rechargement de crédit prépayé. La fréquence et le montant des recharges sont parmi les prédicteurs les plus forts du churn.",
+  "telecomx.owner": "billing",
+  "telecomx.topic": "recharge.events",
+  "telecomx.partition_key": "subscriber_id",
+  "telecomx.sla_freshness_seconds": 120,
+  "telecomx.compatibility": "BACKWARD",
+  "telecomx.classification": "P1",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "telecomx.constraint": "unique"
+    },
+    {
+      "name": "event_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      },
+      "telecomx.constraint": "not_null,not_future"
+    },
+    {
+      "name": "ingestion_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0"
+    },
+    {
+      "name": "producer_id",
+      "type": "string"
+    },
+    {
+      "name": "tenant_id",
+      "type": "string",
+      "telecomx.constraint": "not_null,in_ref:tenants"
+    },
+    {
+      "name": "recharge_id",
+      "type": "string",
+      "doc": "Identifiant unique de l'opération de recharge.",
+      "telecomx.constraint": "not_null,unique"
+    },
+    {
+      "name": "subscriber_id",
+      "type": "string",
+      "doc": "MSISDN rechargé. IDENTIFIANT DIRECT — tokenisé.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "subscriber_token",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "amount",
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "precision": 18,
+        "scale": 2
+      },
+      "doc": "Montant rechargé.",
+      "telecomx.unit": "xof",
+      "telecomx.constraint": "gt:0"
+    },
+    {
+      "name": "channel",
+      "type": {
+        "type": "enum",
+        "name": "RechargeChannel",
+        "symbols": [
+          "SCRATCH_CARD",
+          "MOBILE_MONEY",
+          "AGENT",
+          "BANK",
+          "APP",
+          "USSD",
+          "ATM"
+        ]
+      },
+      "doc": "Canal de rechargement. MOBILE_MONEY est le canal dominant."
+    },
+    {
+      "name": "agent_id",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Agent ou point de vente. Un agent atypique est un signal de fraude."
+    },
+    {
+      "name": "balance_after",
+      "type": [
+        "null",
+        {
+          "type": "bytes",
+          "logicalType": "decimal",
+          "precision": 18,
+          "scale": 2
+        }
+      ],
+      "doc": "Solde après rechargement.",
+      "default": null,
+      "telecomx.unit": "xof"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "RechargeStatus",
+        "symbols": [
+          "SUCCESS",
+          "FAILED",
+          "PENDING",
+          "REVERSED"
+        ]
+      },
+      "doc": "Issue de l'opération.",
+      "default": "SUCCESS"
+    },
+    {
+      "name": "region",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Région du point de recharge."
+    },
+    {
+      "name": "is_first_recharge",
+      "type": "boolean",
+      "default": false,
+      "doc": "Première recharge de l'abonné — marque l'activation effective."
+    }
+  ]
+}

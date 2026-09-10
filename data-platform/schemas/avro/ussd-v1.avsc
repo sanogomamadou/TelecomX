@@ -1,0 +1,132 @@
+{
+  "type": "record",
+  "name": "UssdEvent",
+  "namespace": "com.telecomx.messaging.v1",
+  "doc": "Session USSD (menus interactifs *144#, etc.). Canal principal d'accès aux services en zone à faible équipement smartphone : les abandons de session sont un indicateur d'insatisfaction.",
+  "telecomx.owner": "oss-mediation",
+  "telecomx.topic": "ussd.events",
+  "telecomx.partition_key": "subscriber_id",
+  "telecomx.sla_freshness_seconds": 300,
+  "telecomx.compatibility": "BACKWARD",
+  "telecomx.classification": "P1",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "telecomx.constraint": "unique"
+    },
+    {
+      "name": "event_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      },
+      "telecomx.constraint": "not_null,not_future"
+    },
+    {
+      "name": "ingestion_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0"
+    },
+    {
+      "name": "producer_id",
+      "type": "string"
+    },
+    {
+      "name": "tenant_id",
+      "type": "string",
+      "telecomx.constraint": "not_null,in_ref:tenants"
+    },
+    {
+      "name": "session_id",
+      "type": "string",
+      "doc": "Identifiant technique de la session USSD.",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "subscriber_id",
+      "type": "string",
+      "doc": "MSISDN. IDENTIFIANT DIRECT — tokenisé.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "subscriber_token",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "service_code",
+      "type": "string",
+      "doc": "Code USSD composé (ex. *144#). Identifie le service consulté."
+    },
+    {
+      "name": "menu_path",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Chemin de navigation dans l'arborescence (ex. 144>2>1). Permet d'analyser les parcours et les points d'abandon."
+    },
+    {
+      "name": "service_category",
+      "type": {
+        "type": "enum",
+        "name": "UssdCategory",
+        "symbols": [
+          "BALANCE",
+          "BUNDLE_PURCHASE",
+          "MOBILE_MONEY",
+          "CUSTOMER_SERVICE",
+          "PROMOTION",
+          "TRANSFER",
+          "OTHER"
+        ]
+      },
+      "doc": "Catégorie fonctionnelle du service consulté.",
+      "default": "OTHER"
+    },
+    {
+      "name": "cell_id",
+      "type": [
+        "null",
+        "string"
+      ],
+      "doc": "Cellule servante durant la session.",
+      "default": null
+    },
+    {
+      "name": "duration_seconds",
+      "type": "int",
+      "doc": "Durée totale de la session.",
+      "telecomx.unit": "second",
+      "telecomx.constraint": "gte:0,lte:600"
+    },
+    {
+      "name": "step_count",
+      "type": "int",
+      "default": 1,
+      "doc": "Nombre d'interactions dans la session.",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "UssdStatus",
+        "symbols": [
+          "COMPLETED",
+          "ABANDONED",
+          "TIMEOUT",
+          "FAILED",
+          "NETWORK_ERROR"
+        ]
+      },
+      "doc": "ABANDONED et TIMEOUT alimentent l'analyse d'expérience client et le modèle de churn."
+    }
+  ]
+}

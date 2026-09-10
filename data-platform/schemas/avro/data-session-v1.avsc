@@ -1,0 +1,184 @@
+{
+  "type": "record",
+  "name": "DataSession",
+  "namespace": "com.telecomx.data.v1",
+  "doc": "Session de données mobiles (PDP context / PDU session). Base du traffic analytics et de la mesure de qualité vécue par l'abonné.",
+  "telecomx.owner": "oss-mediation",
+  "telecomx.topic": "data.sessions",
+  "telecomx.partition_key": "subscriber_id",
+  "telecomx.sla_freshness_seconds": 300,
+  "telecomx.compatibility": "BACKWARD",
+  "telecomx.classification": "P1",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "telecomx.constraint": "unique"
+    },
+    {
+      "name": "event_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      },
+      "doc": "Instant de fin de session, en UTC.",
+      "telecomx.constraint": "not_null,not_future"
+    },
+    {
+      "name": "ingestion_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0"
+    },
+    {
+      "name": "producer_id",
+      "type": "string"
+    },
+    {
+      "name": "tenant_id",
+      "type": "string",
+      "telecomx.constraint": "not_null,in_ref:tenants"
+    },
+    {
+      "name": "session_id",
+      "type": "string",
+      "doc": "Identifiant technique de la session."
+    },
+    {
+      "name": "subscriber_id",
+      "type": "string",
+      "doc": "MSISDN de l'abonné. IDENTIFIANT DIRECT — tokenisé en subscriber_token.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "subscriber_token",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "imei",
+      "type": [
+        "null",
+        "string"
+      ],
+      "doc": "Identifiant d'appareil. IDENTIFIANT INDIRECT — tokenisé en device_token.",
+      "default": null,
+      "telecomx.pii": "indirect",
+      "telecomx.tokenize_as": "device_token"
+    },
+    {
+      "name": "ip_address",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Adresse IP attribuée. IDENTIFIANT INDIRECT — tronquée au /24 en silver, jamais conservée entière.",
+      "telecomx.pii": "indirect",
+      "telecomx.transform": "truncate_ip_24"
+    },
+    {
+      "name": "cell_id",
+      "type": "string",
+      "doc": "Cellule servante. Associé à l'abonné, constitue une donnée de localisation (P3).",
+      "telecomx.constraint": "not_null,in_ref:cells"
+    },
+    {
+      "name": "technology",
+      "type": {
+        "type": "enum",
+        "name": "SessionTechnology",
+        "symbols": [
+          "G2",
+          "G3",
+          "G4",
+          "G5"
+        ]
+      },
+      "doc": "Technologie radio utilisée pendant la session."
+    },
+    {
+      "name": "apn",
+      "type": "string",
+      "doc": "Access Point Name (ex. internet, mms, iot). Distingue les usages."
+    },
+    {
+      "name": "duration_seconds",
+      "type": "int",
+      "doc": "Durée de la session.",
+      "telecomx.unit": "second",
+      "telecomx.constraint": "gte:0,lte:86400"
+    },
+    {
+      "name": "download_mb",
+      "type": "double",
+      "doc": "Volume descendant échangé.",
+      "telecomx.unit": "megabyte",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "upload_mb",
+      "type": "double",
+      "doc": "Volume montant échangé.",
+      "telecomx.unit": "megabyte",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "total_volume_mb",
+      "type": "double",
+      "doc": "Volume total. Règle métier vérifiée en silver : total_volume_mb = download_mb + upload_mb (tolérance 0,01).",
+      "telecomx.unit": "megabyte",
+      "telecomx.constraint": "gte:0,eq_sum:download_mb+upload_mb"
+    },
+    {
+      "name": "avg_throughput_mbps",
+      "type": "double",
+      "doc": "Débit moyen observé durant la session — mesure directe de la qualité vécue.",
+      "telecomx.unit": "megabit_per_second",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "termination_cause",
+      "type": {
+        "type": "enum",
+        "name": "TerminationCause",
+        "symbols": [
+          "NORMAL",
+          "TIMEOUT",
+          "QUOTA_EXHAUSTED",
+          "NETWORK_FAILURE",
+          "HANDOVER_FAILURE",
+          "USER_DETACH"
+        ]
+      },
+      "default": "NORMAL",
+      "doc": "NETWORK_FAILURE et HANDOVER_FAILURE sont des indicateurs de dégradation réseau."
+    },
+    {
+      "name": "bundle_code",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Forfait ayant financé la session, si applicable."
+    },
+    {
+      "name": "charged_amount",
+      "type": "double",
+      "doc": "Montant facturé pour la session, hors forfait.",
+      "default": 0.0,
+      "telecomx.unit": "xof",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "is_roaming",
+      "type": "boolean",
+      "doc": "Session réalisée en itinérance.",
+      "default": false
+    }
+  ]
+}

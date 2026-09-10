@@ -1,0 +1,142 @@
+{
+  "type": "record",
+  "name": "CallDetailRecord",
+  "namespace": "com.telecomx.cdr.v1",
+  "doc": "Enregistrement de métadonnées d'appel voix. ATTENTION : contient des identifiants directs en bronze — voir ADR-013 et la politique PII. Le contenu des communications n'est JAMAIS collecté.",
+  "telecomx.owner": "oss-mediation",
+  "telecomx.topic": "cdr.events",
+  "telecomx.partition_key": "caller_id",
+  "telecomx.sla_freshness_seconds": 300,
+  "telecomx.compatibility": "BACKWARD",
+  "telecomx.classification": "P1",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "doc": "UUID v7 unique. Clé de déduplication.",
+      "telecomx.constraint": "unique"
+    },
+    {
+      "name": "event_timestamp",
+      "type": { "type": "long", "logicalType": "timestamp-micros" },
+      "doc": "Instant de début d'appel, en UTC.",
+      "telecomx.constraint": "not_null,not_future"
+    },
+    {
+      "name": "ingestion_timestamp",
+      "type": { "type": "long", "logicalType": "timestamp-micros" },
+      "doc": "Instant d'entrée dans la plateforme, en UTC."
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0"
+    },
+    {
+      "name": "producer_id",
+      "type": "string",
+      "doc": "Système de médiation émetteur."
+    },
+    {
+      "name": "tenant_id",
+      "type": "string",
+      "telecomx.constraint": "not_null,in_ref:tenants"
+    },
+    {
+      "name": "call_id",
+      "type": "string",
+      "doc": "Identifiant technique de l'appel côté cœur de réseau, au format CALL-NNNNNNN."
+    },
+    {
+      "name": "caller_id",
+      "type": "string",
+      "doc": "MSISDN de l'appelant. IDENTIFIANT DIRECT — tokenisé en subscriber_token dès silver.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "subscriber_token",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "callee_id",
+      "type": "string",
+      "doc": "MSISDN de l'appelé. IDENTIFIANT DIRECT — tokenisé en callee_token dès silver.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "callee_token",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "imsi",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Identifiant SIM de l'appelant. IDENTIFIANT DIRECT — tokenisé.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "imsi_token"
+    },
+    {
+      "name": "imei",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Identifiant d'appareil. IDENTIFIANT INDIRECT — tokenisé.",
+      "telecomx.pii": "indirect",
+      "telecomx.tokenize_as": "device_token"
+    },
+    {
+      "name": "cell_id",
+      "type": "string",
+      "doc": "Cellule servante au début de l'appel. Associé à un abonné, devient une donnée de localisation (P3).",
+      "telecomx.constraint": "not_null,in_ref:cells"
+    },
+    {
+      "name": "call_type",
+      "type": { "type": "enum", "name": "CallType", "symbols": ["MO", "MT", "FORWARDED"] },
+      "doc": "MO = Mobile Originated (sortant), MT = Mobile Terminated (entrant)."
+    },
+    {
+      "name": "duration_seconds",
+      "type": "int",
+      "doc": "Durée de l'appel. Zéro si l'appel a échoué ou n'a pas abouti.",
+      "telecomx.unit": "second",
+      "telecomx.constraint": "gte:0,lte:86400"
+    },
+    {
+      "name": "call_status",
+      "type": {
+        "type": "enum",
+        "name": "CallStatus",
+        "symbols": ["COMPLETED", "DROPPED", "FAILED", "BUSY", "NO_ANSWER", "REJECTED"]
+      },
+      "doc": "Issue de l'appel. DROPPED alimente le calcul du drop rate."
+    },
+    {
+      "name": "failure_cause",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Code de cause normalisé lorsque le statut n'est pas COMPLETED."
+    },
+    {
+      "name": "is_roaming",
+      "type": "boolean",
+      "default": false,
+      "doc": "Appel passé en itinérance."
+    },
+    {
+      "name": "is_international",
+      "type": "boolean",
+      "default": false,
+      "doc": "Destination internationale. Signal utilisé par la détection de fraude."
+    },
+    {
+      "name": "charged_amount",
+      "type": "double",
+      "default": 0.0,
+      "doc": "Montant facturé.",
+      "telecomx.unit": "xof",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "rate_plan",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Code du plan tarifaire appliqué."
+    }
+  ]
+}

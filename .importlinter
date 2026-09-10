@@ -1,0 +1,57 @@
+; Architecture rules enforced in CI (ADR-001, ADR-009, ADR-016).
+; Run with: lint-imports
+;
+; These contracts turn architectural intent into a build failure. A rule that is
+; only written in a document is a suggestion; a rule checked here is a constraint.
+
+[importlinter]
+root_packages =
+    telecom_common
+include_external_packages = True
+
+; --- Layered architecture (ADR-001) -----------------------------------------
+; A layer may only import layers below it. Never sideways between application
+; modules, never upwards.
+[importlinter:contract:layers]
+name = Layered architecture
+type = layers
+layers =
+    apps
+    agents
+    ml_platform
+    data_platform
+    telecom_common
+ignore_imports =
+    tests.** -> **
+
+; --- LLM SDK isolation (ADR-009) --------------------------------------------
+; Only the gateway's provider adapters may import a vendor SDK. This is what
+; makes "switching provider is a config change" true rather than aspirational.
+[importlinter:contract:llm-isolation]
+name = LLM SDKs are confined to the gateway providers
+type = forbidden
+source_modules =
+    agents
+    apps
+    ml_platform
+    data_platform
+forbidden_modules =
+    groq
+    openai
+    anthropic
+    google.generativeai
+    ollama
+
+; --- Direct data access isolation (ADR-016) ---------------------------------
+; Business code must go through TenantScopedRepository so that the tenant filter
+; cannot be forgotten. Raw clients are reserved for the data access layer.
+[importlinter:contract:no-raw-data-clients]
+name = No raw query clients outside the data access layer
+type = forbidden
+source_modules =
+    agents.tools
+    apps.api.routers
+forbidden_modules =
+    trino
+    sqlalchemy.engine
+    pyiceberg

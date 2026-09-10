@@ -1,0 +1,225 @@
+{
+  "type": "record",
+  "name": "MobileMoneyTransaction",
+  "namespace": "com.telecomx.mobilemoney.v1",
+  "doc": "Transaction Mobile Money. Donnée financière soumise à des exigences d'audit renforcées : rétention 90 jours sur Kafka, compatibilité FULL, traçabilité intégrale.",
+  "telecomx.owner": "mobile-money-platform",
+  "telecomx.topic": "mobilemoney.transactions",
+  "telecomx.partition_key": "sender_account",
+  "telecomx.sla_freshness_seconds": 60,
+  "telecomx.compatibility": "FULL",
+  "telecomx.classification": "P1",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "telecomx.constraint": "unique"
+    },
+    {
+      "name": "event_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      },
+      "telecomx.constraint": "not_null,not_future"
+    },
+    {
+      "name": "ingestion_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0"
+    },
+    {
+      "name": "producer_id",
+      "type": "string"
+    },
+    {
+      "name": "tenant_id",
+      "type": "string",
+      "telecomx.constraint": "not_null,in_ref:tenants"
+    },
+    {
+      "name": "transaction_id",
+      "type": "string",
+      "doc": "Identifiant unique de transaction, au format TRX-YYYYMMDD-NNNNNNNN.",
+      "telecomx.constraint": "not_null,unique"
+    },
+    {
+      "name": "transaction_type",
+      "type": {
+        "type": "enum",
+        "name": "TransactionType",
+        "symbols": [
+          "P2P",
+          "CASH_IN",
+          "CASH_OUT",
+          "MERCHANT_PAYMENT",
+          "BILL_PAYMENT",
+          "AIRTIME_PURCHASE",
+          "BULK_DISBURSEMENT",
+          "REVERSAL"
+        ]
+      },
+      "doc": "Nature de l'opération. CASH_OUT et P2P concentrent l'essentiel des schémas de fraude."
+    },
+    {
+      "name": "sender_account",
+      "type": "string",
+      "doc": "Compte émetteur. IDENTIFIANT DIRECT — tokenisé en sender_token dès silver.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "sender_token",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "receiver_account",
+      "type": "string",
+      "doc": "Compte destinataire. IDENTIFIANT DIRECT — tokenisé en receiver_token.",
+      "telecomx.pii": "direct",
+      "telecomx.tokenize_as": "receiver_token",
+      "telecomx.constraint": "not_null"
+    },
+    {
+      "name": "merchant_id",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Identifiant du marchand pour les paiements. Non tokenisé : entité commerciale, pas personne physique."
+    },
+    {
+      "name": "amount",
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "precision": 18,
+        "scale": 2
+      },
+      "doc": "Montant de la transaction. Type decimal et non double : aucune imprécision flottante tolérée sur une donnée financière.",
+      "telecomx.unit": "xof",
+      "telecomx.constraint": "gt:0"
+    },
+    {
+      "name": "fee",
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "precision": 18,
+        "scale": 2
+      },
+      "doc": "Frais prélevés.",
+      "telecomx.unit": "xof",
+      "telecomx.constraint": "gte:0"
+    },
+    {
+      "name": "currency",
+      "type": "string",
+      "default": "XOF",
+      "doc": "Code ISO 4217."
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "TransactionStatus",
+        "symbols": [
+          "COMPLETED",
+          "PENDING",
+          "FAILED",
+          "REVERSED",
+          "BLOCKED"
+        ]
+      },
+      "doc": "Issue de la transaction. BLOCKED indique un rejet par les contrôles anti-fraude."
+    },
+    {
+      "name": "failure_reason",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Motif normalisé en cas d'échec (solde insuffisant, compte suspendu, limite dépassée...)."
+    },
+    {
+      "name": "channel",
+      "type": {
+        "type": "enum",
+        "name": "TransactionChannel",
+        "symbols": [
+          "USSD",
+          "APP",
+          "AGENT",
+          "API",
+          "WEB"
+        ]
+      },
+      "doc": "Canal d'initiation. Un changement brutal de canal habituel est un signal de fraude."
+    },
+    {
+      "name": "agent_id",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Agent Mobile Money pour les opérations CASH_IN / CASH_OUT."
+    },
+    {
+      "name": "location_cell_id",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Cellule d'où la transaction a été initiée. GÉNÉRALISATION de la localisation GPS (politique PII §3.2) : jamais de coordonnées précises."
+    },
+    {
+      "name": "region",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Région dérivée de la cellule. Un écart géographique inhabituel est un signal de fraude majeur."
+    },
+    {
+      "name": "device_id",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "Empreinte d'appareil. IDENTIFIANT INDIRECT — tokenisé. Un changement d'appareil précédant une transaction inhabituelle est un signal fort.",
+      "telecomx.pii": "indirect",
+      "telecomx.tokenize_as": "device_token"
+    },
+    {
+      "name": "sender_balance_before",
+      "type": [
+        "null",
+        {
+          "type": "bytes",
+          "logicalType": "decimal",
+          "precision": 18,
+          "scale": 2
+        }
+      ],
+      "default": null,
+      "doc": "Solde avant opération. Permet de détecter les vidages de compte.",
+      "telecomx.unit": "xof"
+    },
+    {
+      "name": "is_cross_border",
+      "type": "boolean",
+      "default": false,
+      "doc": "Transaction transfrontalière."
+    }
+  ]
+}
