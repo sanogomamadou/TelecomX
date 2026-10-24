@@ -8,16 +8,25 @@ license = { text = "MIT" }
 
 # Kept deliberately minimal: this library is imported by every other component
 # (ADR-001), so each dependency added here is imposed on all of them.
+#
+# The observability packages are mandatory rather than optional: NFR-OBS-001
+# requires every service to emit metrics, structured logs and traces, so an
+# "optional instrumentation" extra would only create components that skip it.
+# opentelemetry-api is the lightweight facade -- it is a no-op until an SDK is
+# configured, so importing it costs nothing in a process that exports nothing.
 dependencies = [
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
+    "opentelemetry-api>=1.28",
+    "prometheus-client>=0.21",
 ]
 
 [project.optional-dependencies]
-observability = [
-    "opentelemetry-api>=1.28",
+# Only the exporting side is optional: a library consumer needs the API to
+# instrument, but only a running service needs the SDK to export.
+otel-sdk = [
     "opentelemetry-sdk>=1.28",
-    "prometheus-client>=0.21",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.28",
 ]
 
 [build-system]

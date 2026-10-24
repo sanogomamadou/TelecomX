@@ -25,6 +25,9 @@ dev = [
     "import-linter>=2.1",
     "pre-commit>=4.0",
     "fastavro>=1.9",
+    # Needed to exercise trace/log correlation (NFR-OBS-002) against a real
+    # span context rather than the no-op API default.
+    "opentelemetry-sdk>=1.28",
 ]
 
 [tool.uv.workspace]
