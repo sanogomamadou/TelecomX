@@ -117,11 +117,7 @@ def validate_field(fld: dict[str, Any], report: ContractReport) -> None:
     type_name, _ = unwrap_type(fld.get("type"))
 
     # Rule: numeric measures must declare their unit (prevents silent semantic drift).
-    if (
-        type_name in NUMERIC_TYPES
-        and name not in UNIT_EXEMPT_FIELDS
-        and "telecomx.unit" not in fld
-    ):
+    if type_name in NUMERIC_TYPES and name not in UNIT_EXEMPT_FIELDS and "telecomx.unit" not in fld:
         report.warnings.append(
             f"field '{name}': numeric measure without 'telecomx.unit' "
             "(see docs/data/contracts/README.md §4.2)"
@@ -158,7 +154,7 @@ def validate_contract(path: Path) -> ContractReport:
     if HAS_FASTAVRO:
         try:
             fastavro.parse_schema(schema)
-        except Exception as exc:  # noqa: BLE001 - fastavro raises varied types
+        except Exception as exc:
             report.errors.append(f"invalid Avro schema: {exc}")
             return report
 

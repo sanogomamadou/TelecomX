@@ -1,0 +1,28 @@
+[project]
+name = "telecom-common"
+version = "0.1.0"
+description = "Shared domain types, PII tokenization and observability for the TelecomX platform"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# Kept deliberately minimal: this library is imported by every other component
+# (ADR-001), so each dependency added here is imposed on all of them.
+dependencies = [
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+]
+
+[project.optional-dependencies]
+observability = [
+    "opentelemetry-api>=1.28",
+    "opentelemetry-sdk>=1.28",
+    "prometheus-client>=0.21",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/telecom_common"]

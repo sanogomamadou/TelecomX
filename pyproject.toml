@@ -13,6 +13,10 @@ dependencies = []
 
 [dependency-groups]
 dev = [
+    # Workspace members are installed editable so that `pytest tests/` can
+    # import them without a build step, and so that an edit is picked up
+    # immediately. Add each new member here as it is created.
+    "telecom-common",
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "pytest-asyncio>=0.24",
@@ -24,14 +28,20 @@ dev = [
 ]
 
 [tool.uv.workspace]
+# Members are added as each component is implemented; uv requires every listed
+# member to carry a pyproject.toml, so declaring future ones up front breaks
+# `uv sync`. Planned additions, in build order:
+#   data-platform/generators  (Phase 1.4)
+#   data-platform/spark       (Phase 1.7, pinned to Python 3.11 for PySpark)
+#   ml-platform               (Phase 3)
+#   agents                    (Phase 4)
+#   apps/api                  (Phase 5)
 members = [
     "libs/telecom-common",
-    "data-platform/generators",
-    "data-platform/spark",
-    "ml-platform",
-    "agents",
-    "apps/api",
 ]
+
+[tool.uv.sources]
+telecom-common = { workspace = true }
 
 # ---------------------------------------------------------------------------
 # Ruff — lint + format (replaces flake8, black, isort, pyupgrade, bandit)

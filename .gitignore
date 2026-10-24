@@ -41,7 +41,8 @@ MANIFEST
 venv/
 ENV/
 env/
-.python-version
+# NOTE: .python-version is intentionally NOT ignored — it pins the interpreter
+# version for the whole workspace and must be reproducible across machines.
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
