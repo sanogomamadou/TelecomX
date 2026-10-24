@@ -14,7 +14,7 @@ La plateforme compte **une vingtaine de services**. L'environnement de développ
 
 | Ressource | Valeur | Disponible pour Docker |
 |---|---|---|
-| RAM | 15,6 GB | ~8–10 GB (Windows + WSL2 + IDE consomment le reste) |
+| RAM | 15,6 GB | **~7 GB** (Windows + VS Code + outils de développement consomment ~8,6 GB — *mesuré*, cf. §Révision) |
 | CPU | 12 vCPU (i5-1235U) | ~8 vCPU |
 | Disque | 54 GB libres | ~35 GB (images + volumes) |
 
@@ -28,12 +28,12 @@ Un inventaire honnête des empreintes mémoire montre l'impossibilité de tout d
 | PostgreSQL | 0,3 GB | Prometheus | 0,3 GB |
 | Redis | 0,1 GB | Grafana | 0,2 GB |
 | Iceberg REST catalog | 0,3 GB | Loki | 0,2 GB |
-| Spark (master+worker) | 4,0 GB | OTel Collector | 0,15 GB |
-| Trino (coord.+worker) | 2,0 GB | Langfuse (+ClickHouse) | 1,5 GB |
+| Spark (master+worker) | 2,3 GB | OTel Collector | 0,15 GB |
+| Trino (coord.+worker) | 1,5 GB | Langfuse (+ClickHouse) | 1,5 GB |
 | API + agents + frontend | 1,1 GB | OpenMetadata (+ES+MySQL) | 3,0 GB |
-| | | **TOTAL** | **~16,2 GB** |
+| | | **TOTAL** | **~14,0 GB** |
 
-> **Conclusion : ~16 GB nécessaires pour ~9 GB disponibles.** Tout démarrer est physiquement
+> **Conclusion : ~14 GB nécessaires pour ~7 GB disponibles.** Tout démarrer est physiquement
 > impossible. Ce n'est pas un détail d'exploitation, c'est une **contrainte d'architecture**
 > qui doit être traitée par conception.
 
@@ -68,14 +68,14 @@ profil isolé qui manquerait de ses dépendances.
 | Profil | Services | RAM | Usage |
 |---|---|---|---|
 | `core` | Kafka, Schema Registry, MinIO, PostgreSQL, Redis | **2,1 GB** | Socle — inclus par tous les autres |
-| `lakehouse` | core + Iceberg REST + Spark + Trino | **8,4 GB** | Phases 1-2 : ingestion, transformations, dbt |
+| `lakehouse` | core + Iceberg REST + Spark + Trino | **6,2 GB** | Phases 1-2 : ingestion, transformations, dbt |
 | `ml` | core + MLflow + model serving | **2,7 GB** | Phase 3 : entraînement et service de modèles |
 | `agents` | core + Qdrant + agent service | **2,8 GB** | Phase 4 : développement des agents |
 | `app` | core + API + frontend | **3,2 GB** | Phase 5 : développement applicatif |
 | `observability` | Prometheus, Grafana, Loki, OTel, Langfuse | **2,5 GB** | Phase 7 (ajoutable à un autre profil) |
 | `security` | Keycloak | **0,8 GB** | Phase 5 : authentification |
 | `governance` | OpenMetadata + Elasticsearch + MySQL | **3,2 GB** | Phase 2 : catalogue et lineage (ponctuel) |
-| **`demo`** | core + Trino + agents + API + frontend + Prometheus/Grafana | **7,6 GB** | **Scénario bout-en-bout du PRD §8** |
+| **`demo`** | core + Trino + agents + API + frontend + Prometheus/Grafana | **5,5 GB** | **Scénario bout-en-bout du PRD §8** |
 
 ### Résolution de la contrainte C2 (le profil `demo`)
 
@@ -106,19 +106,19 @@ soit 12+ GB en démarrage simultané. La solution est un **découplage temporel*
 **Négatives**
 - **Discipline permanente** : un `docker compose up` sans profil ne démarre rien d'utile → mitigé par un `Makefile` explicite (`make up-lakehouse`, `make demo`).
 - Certains tests d'intégration ont besoin de plusieurs profils simultanément → identifiés, et exécutés sur runner CI (plus de RAM) plutôt qu'en local.
-- Le profil `lakehouse` (8,4 GB) est à la limite : il ne peut coexister avec `observability`.
+- Le profil `lakehouse` (6,2 GB) reste le plus lourd : il ne peut coexister avec `observability` (2,5 GB).
 - Le développement multi-couches simultané (ex. Spark **et** agents) impose des arrêts/redémarrages.
 
 **À surveiller**
 - Consommation disque des volumes : rétention bronze réduite à 7 jours, `make clean-data` fourni.
-- La configuration WSL2 (`.wslconfig`) doit allouer au moins 10 GB, sinon le profil `lakehouse` échoue.
+- La configuration WSL2 (`.wslconfig`) doit allouer 7 GB, sinon le profil `lakehouse` échoue.
 
 ## Notes d'implémentation
 
 **Configuration WSL2 requise** (`%USERPROFILE%\.wslconfig`) :
 ```ini
 [wsl2]
-memory=10GB
+memory=7GB
 processors=8
 swap=4GB
 ```
@@ -148,6 +148,68 @@ make up-agents          make up-app             make up-obs
 make demo               # orchestre le scénario complet
 make down               make clean-data         make ps-mem   # RAM consommée par service
 ```
+
+---
+
+## Révision — 2026-10-24
+
+La **décision** (profils Docker Compose) est confirmée par l'usage. Le **dimensionnement** qui
+l'accompagnait était faux sur deux points, découverts à la première tentative de démarrage réel.
+Les chiffres du corps de cet ADR ont été corrigés ; cette section conserve la trace de l'erreur.
+
+### Erreur 1 — budget hôte surestimé
+
+| | Estimation initiale | Mesure réelle |
+|---|---|---|
+| RAM disponible pour Docker | ~8–10 GB | **~7 GB** |
+| Allocation `.wslconfig` | `memory=10GB` | **`memory=7GB`** |
+
+L'hypothèse « Windows + IDE consomment ~5 GB » était optimiste. Mesure sur l'environnement cible,
+Docker arrêté et navigateur fermé :
+
+| Application | RAM |
+|---|---|
+| VS Code (32 processus) | **5,74 GB** |
+| Outils annexes (kilo, ChatGPT, webview) | 2,78 GB |
+| Windows (svchost, Defender) | 1,63 GB |
+| Autres outils de développement | 0,89 GB |
+
+VS Code seul consomme davantage que ce qui avait été budgété pour tout Windows. Avec
+`memory=10GB`, WSL ne pouvait pas obtenir son allocation : la distro démarrait en état
+zombie (`Running` mais ne répondant pas, `vmmemWSL` à 40 Mo), et le moteur Docker renvoyait
+`Internal Server Error` sur chaque requête.
+
+### Erreur 2 — Spark et Trino surdimensionnés
+
+Spark avait été dimensionné sur le débit de **production** (2 475 msg/s) alors que
+l'environnement de développement tourne à `SPEED_FACTOR=0.001`, soit **~2,5 msg/s** —
+**mille fois moins**. Allouer 4 Go à un executor traitant 2,5 messages par seconde n'avait
+aucun fondement.
+
+| Service | Avant | Après | Configuration |
+|---|---|---|---|
+| Spark | 4,0 GB | **2,3 GB** | driver 768 Mo + 1 executor 1,5 Go |
+| Trino | 2,0 GB | **1,5 GB** | coordinateur + 1 worker |
+| Profil `lakehouse` | 8,4 GB | **6,2 GB** | |
+| Profil `demo` | 7,6 GB | **5,5 GB** | |
+| Inventaire total | ~16,2 GB | **~14,0 GB** | |
+
+### Effet
+
+Le profil `lakehouse` (6,2 GB) tient désormais dans les 7 GB alloués **sans fermer VS Code**,
+ce qui supprime la contrainte d'exploitation la plus pénible de la version initiale. Le
+découplage temporel décrit au §Décision (préparation sous `lakehouse`, démonstration sous `demo`)
+reste valable et devient confortable.
+
+### Enseignement
+
+> Un budget de ressources estimé n'est qu'une hypothèse. Celui-ci a tenu une phase entière avant
+> d'être confronté au réel, et s'est révélé faux dans les deux sens à la fois : trop optimiste sur
+> l'hôte, trop pessimiste sur les services. **Mesurer avant de dimensionner** — et, lorsque la
+> charge de développement est mille fois inférieure à celle de production, dimensionner pour la
+> charge de développement, pas pour la production.
+
+---
 
 ## Références
 - [PRD §9.1 C1](../product/PRD.md) · [NFR-ENV-001](../product/SRS.md) · [ADR-002](ADR-002-event-backbone.md) · [ADR-005](ADR-005-stream-processing.md)

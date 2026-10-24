@@ -215,11 +215,11 @@ Voir [ADR-011](../adr/ADR-011-local-dev-strategy.md) pour le budget mémoire dé
 | Profil | RAM | Usage |
 |---|---|---|
 | `core` | 2,1 GB | Socle commun |
-| `lakehouse` | 8,4 GB | Ingestion et transformations |
+| `lakehouse` | 6,2 GB | Ingestion et transformations |
 | `ml` | 2,7 GB | Entraînement et service |
 | `agents` | 2,8 GB | Développement des agents |
 | `app` | 3,2 GB | API et frontend |
-| `demo` | 7,6 GB | Scénario bout-en-bout |
+| `demo` | 5,5 GB | Scénario bout-en-bout |
 
 ### 5.2 Production cible — Kubernetes
 

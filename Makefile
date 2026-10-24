@@ -55,7 +55,7 @@ up-core: ## Start core services: Kafka, Schema Registry, MinIO, PostgreSQL, Redi
 	$(call not_yet,up-core,1)
 
 .PHONY: up-lakehouse
-up-lakehouse: ## Start core + Iceberg, Spark, Trino (8.4 GB)
+up-lakehouse: ## Start core + Iceberg, Spark, Trino (6.2 GB)
 	$(call not_yet,up-lakehouse,1)
 
 .PHONY: up-ml

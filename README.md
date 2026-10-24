@@ -86,7 +86,7 @@ actions sous contrôle humain.
 
 | Outil | Version | Note |
 |---|---|---|
-| Docker Desktop | ≥ 24 | **≥ 10 GB alloués à WSL2** — voir [ADR-011](docs/adr/ADR-011-local-dev-strategy.md) |
+| Docker Desktop | ≥ 24 | **7 GB alloués à WSL2** (`.wslconfig`) — voir [ADR-011](docs/adr/ADR-011-local-dev-strategy.md) |
 | Python | ≥ 3.11 | Installé par `uv` si absent |
 | Node.js | ≥ 20 | Frontend uniquement (Phase 5) |
 | Git | ≥ 2.40 | |
@@ -101,18 +101,18 @@ cp .env.example .env       # puis renseigner GROQ_API_KEY
 
 ### Profils Docker Compose
 
-⚠️ **La stack complète ne tient pas en mémoire** (~16 GB requis pour ~9 GB disponibles).
+⚠️ **La stack complète ne tient pas en mémoire** (~14 GB requis pour ~7 GB disponibles).
 Les services sont donc regroupés en profils — voir [ADR-011](docs/adr/ADR-011-local-dev-strategy.md).
 
 ```bash
 make up-core          # Kafka, Schema Registry, MinIO, PostgreSQL, Redis    (2,1 GB)
-make up-lakehouse     # + Iceberg, Spark, Trino                             (8,4 GB)
+make up-lakehouse     # + Iceberg, Spark, Trino                             (6,2 GB)
 make up-ml            # + MLflow, model serving                             (2,7 GB)
 make up-agents        # + Qdrant, agent service                             (2,8 GB)
 make up-app           # + API, frontend                                     (3,2 GB)
 make up-obs           # + Prometheus, Grafana, Loki, Langfuse               (2,5 GB)
 
-make demo             # 🎬 scénario bout-en-bout complet                     (7,6 GB)
+make demo             # 🎬 scénario bout-en-bout complet                     (5,5 GB)
 make down             # tout arrêter
 make ps-mem           # RAM consommée par service
 ```

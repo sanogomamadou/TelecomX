@@ -87,7 +87,7 @@ une décennie à essayer de contourner.
 - PySpark s'aligne avec la stack Python de la plateforme ML.
 
 **Négatives**
-- **Empreinte mémoire significative** : le profil `lakehouse` nécessite ~4 Go pour Spark seul → contrainte majeure sur 16 GB ([ADR-011](ADR-011-local-dev-strategy.md)).
+- **Empreinte mémoire significative** : le profil `lakehouse` réserve ~2,3 Go pour Spark seul → poste le plus lourd du budget local ([ADR-011](ADR-011-local-dev-strategy.md), §Révision).
 - Micro-batch ⇒ **génération de petits fichiers** dans Iceberg → compaction obligatoire ([ADR-003](ADR-003-table-format.md), conséquences négatives).
 - Le démarrage d'un job Spark coûte plusieurs dizaines de secondes — inadapté aux tâches très courtes.
 - Le débogage d'un job distribué est plus laborieux qu'un script Python.
@@ -125,7 +125,7 @@ data-platform/spark/
 .dropDuplicates(["event_id"])                 # dédup bornée par le watermark
 ```
 
-**Ressources en développement** : driver 1 Go, 1 executor 2 Go, 2 cœurs, `spark.sql.shuffle.partitions=8`
+**Ressources en développement** : driver 768 Mo, 1 executor 1,5 Go, 2 cœurs, `spark.sql.shuffle.partitions=8`
 (la valeur par défaut de 200 est catastrophique en local).
 
 ## Références
