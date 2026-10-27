@@ -1,0 +1,4660 @@
+{
+  "manifest_version": 1,
+  "contracts": {
+    "bundle-v1": {
+      "name": "BundleEvent",
+      "namespace": "com.telecomx.billing.v1",
+      "doc": "Cycle de vie d'un forfait (achat, activation, consommation, expiration). Le taux d'utilisation d'un forfait est un signal de churn : un abonné qui n'épuise plus ses bundles se désengage.",
+      "owner": "billing",
+      "topic": "bundle.events",
+      "partition_key": "subscriber_id",
+      "freshness_seconds": 300,
+      "compatibility": "BACKWARD",
+      "classification": "P1",
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "UUID v7, unique per event. Deduplication key.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "event_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event occurred in the real world, in UTC.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "not_future"
+            }
+          ]
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event entered the platform, in UTC. Drives freshness.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "schema_version",
+          "type": "string",
+          "nullable": false,
+          "doc": "Semantic version of the contract, carried by the event for debugging.",
+          "has_default": true,
+          "default": "1.0.0",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "producer_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifier of the emitting system or adapter.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "tenant_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Tenant owning the event. A message without it is routed to the DLQ (ADR-016).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "tenants"
+            }
+          ]
+        },
+        {
+          "name": "subscriber_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "MSISDN de l'abonné. IDENTIFIANT DIRECT — tokenisé en subscriber_token.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "subscriber_token",
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "bundle_code",
+          "type": "string",
+          "nullable": false,
+          "doc": "Code du forfait (ex. DATA-10GB, VOICE-100MIN).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "bundles"
+            }
+          ]
+        },
+        {
+          "name": "event_type",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Étape du cycle de vie du forfait. EXPIRED avec un consumed_mb faible révèle un forfait gaspillé.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "BundleEventType",
+          "enum_symbols": [
+            "PURCHASED",
+            "ACTIVATED",
+            "CONSUMED",
+            "EXPIRED",
+            "RENEWED",
+            "CANCELLED"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "bundle_type",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Nature du forfait. SOCIAL désigne les offres limitées à certaines applications.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "BundleType",
+          "enum_symbols": [
+            "DATA",
+            "VOICE",
+            "SMS",
+            "MIXED",
+            "SOCIAL"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "price",
+          "type": "decimal",
+          "nullable": false,
+          "doc": "Prix payé par l'abonné.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": 18,
+          "scale": 2,
+          "unit": "xof",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "allowance_mb",
+          "type": "double",
+          "nullable": true,
+          "doc": "Volume data inclus.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "megabyte",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "allowance_minutes",
+          "type": "int",
+          "nullable": true,
+          "doc": "Minutes de voix incluses.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "minute",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "consumed_mb",
+          "type": "double",
+          "nullable": true,
+          "doc": "Volume consommé à l'instant de l'événement. Sur EXPIRED, révèle le gaspillage — signal d'insatisfaction tarifaire.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "megabyte",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "validity_days",
+          "type": "int",
+          "nullable": false,
+          "doc": "Durée de validité du forfait à compter de l'activation.",
+          "has_default": true,
+          "default": 30,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "day",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "expiry_timestamp",
+          "type": "timestamp-micros",
+          "nullable": true,
+          "doc": "Instant d'expiration du forfait, en UTC.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "purchase_channel",
+          "type": "enum",
+          "nullable": true,
+          "doc": "Canal d'achat. AUTO_RENEWAL identifie les reconductions automatiques.",
+          "has_default": true,
+          "default": null,
+          "enum_name": "BundleChannel",
+          "enum_symbols": [
+            "USSD",
+            "APP",
+            "AGENT",
+            "WEB",
+            "AUTO_RENEWAL",
+            "SMS"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "is_auto_renew",
+          "type": "boolean",
+          "nullable": false,
+          "doc": "Forfait souscrit avec reconduction automatique. Réduit fortement le risque de churn.",
+          "has_default": true,
+          "default": false,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        }
+      ]
+    },
+    "cdr-v1": {
+      "name": "CallDetailRecord",
+      "namespace": "com.telecomx.cdr.v1",
+      "doc": "Enregistrement de métadonnées d'appel voix. ATTENTION : contient des identifiants directs en bronze — voir ADR-013 et la politique PII. Le contenu des communications n'est JAMAIS collecté.",
+      "owner": "oss-mediation",
+      "topic": "cdr.events",
+      "partition_key": "caller_id",
+      "freshness_seconds": 300,
+      "compatibility": "BACKWARD",
+      "classification": "P1",
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "UUID v7 unique. Clé de déduplication.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "event_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant de début d'appel, en UTC.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "not_future"
+            }
+          ]
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant d'entrée dans la plateforme, en UTC.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "schema_version",
+          "type": "string",
+          "nullable": false,
+          "doc": "Semantic version of the contract, carried by the event for debugging.",
+          "has_default": true,
+          "default": "1.0.0",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "producer_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Système de médiation émetteur.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "tenant_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Tenant owning the event. A message without it is routed to the DLQ (ADR-016).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "tenants"
+            }
+          ]
+        },
+        {
+          "name": "call_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifiant technique de l'appel côté cœur de réseau, au format CALL-NNNNNNN.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "caller_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "MSISDN de l'appelant. IDENTIFIANT DIRECT — tokenisé en subscriber_token dès silver.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "subscriber_token",
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "callee_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "MSISDN de l'appelé. IDENTIFIANT DIRECT — tokenisé en callee_token dès silver.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "callee_token",
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "imsi",
+          "type": "string",
+          "nullable": true,
+          "doc": "Identifiant SIM de l'appelant. IDENTIFIANT DIRECT — tokenisé.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "imsi_token",
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "imei",
+          "type": "string",
+          "nullable": true,
+          "doc": "Identifiant d'appareil. IDENTIFIANT INDIRECT — tokenisé.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "indirect",
+          "tokenize_as": "device_token",
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "cell_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Cellule servante au début de l'appel. Associé à un abonné, devient une donnée de localisation (P3).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "cells"
+            }
+          ]
+        },
+        {
+          "name": "call_type",
+          "type": "enum",
+          "nullable": false,
+          "doc": "MO = Mobile Originated (sortant), MT = Mobile Terminated (entrant).",
+          "has_default": false,
+          "default": null,
+          "enum_name": "CallType",
+          "enum_symbols": [
+            "MO",
+            "MT",
+            "FORWARDED"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "duration_seconds",
+          "type": "int",
+          "nullable": false,
+          "doc": "Durée de l'appel. Zéro si l'appel a échoué ou n'a pas abouti.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "second",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 86400
+            }
+          ]
+        },
+        {
+          "name": "call_status",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Issue de l'appel. DROPPED alimente le calcul du drop rate.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "CallStatus",
+          "enum_symbols": [
+            "COMPLETED",
+            "DROPPED",
+            "FAILED",
+            "BUSY",
+            "NO_ANSWER",
+            "REJECTED"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "failure_cause",
+          "type": "string",
+          "nullable": true,
+          "doc": "Code de cause normalisé lorsque le statut n'est pas COMPLETED.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "is_roaming",
+          "type": "boolean",
+          "nullable": false,
+          "doc": "Appel passé en itinérance.",
+          "has_default": true,
+          "default": false,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "is_international",
+          "type": "boolean",
+          "nullable": false,
+          "doc": "Destination internationale. Signal utilisé par la détection de fraude.",
+          "has_default": true,
+          "default": false,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "charged_amount",
+          "type": "double",
+          "nullable": false,
+          "doc": "Montant facturé.",
+          "has_default": true,
+          "default": 0.0,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "xof",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "rate_plan",
+          "type": "string",
+          "nullable": true,
+          "doc": "Code du plan tarifaire appliqué.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        }
+      ]
+    },
+    "customer-event-v1": {
+      "name": "CustomerEvent",
+      "namespace": "com.telecomx.crm.v1",
+      "doc": "Événement de relation client issu du CRM : réclamations, changements d'offre, interactions support, résiliation. Source de la variable cible du modèle de churn.",
+      "owner": "crm",
+      "topic": "customer.events",
+      "partition_key": "subscriber_id",
+      "freshness_seconds": 600,
+      "compatibility": "BACKWARD",
+      "classification": "P1",
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "UUID v7, unique per event. Deduplication key.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "event_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event occurred in the real world, in UTC.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "not_future"
+            }
+          ]
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event entered the platform, in UTC. Drives freshness.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "schema_version",
+          "type": "string",
+          "nullable": false,
+          "doc": "Semantic version of the contract, carried by the event for debugging.",
+          "has_default": true,
+          "default": "1.0.0",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "producer_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifier of the emitting system or adapter.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "tenant_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Tenant owning the event. A message without it is routed to the DLQ (ADR-016).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "tenants"
+            }
+          ]
+        },
+        {
+          "name": "subscriber_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "MSISDN de l'abonné concerné. IDENTIFIANT DIRECT — tokenisé en subscriber_token.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "subscriber_token",
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "event_type",
+          "type": "enum",
+          "nullable": false,
+          "doc": "CHURN et PORT_OUT_REQUEST constituent la variable cible du modèle de churn. SIM_SWAP est un signal de fraude majeur (prise de contrôle de compte).",
+          "has_default": false,
+          "default": null,
+          "enum_name": "CustomerEventType",
+          "enum_symbols": [
+            "ACTIVATION",
+            "COMPLAINT",
+            "SUPPORT_CONTACT",
+            "PLAN_CHANGE",
+            "SIM_SWAP",
+            "DEVICE_CHANGE",
+            "SUSPENSION",
+            "REACTIVATION",
+            "CHURN",
+            "PORT_OUT_REQUEST",
+            "SATISFACTION_SURVEY"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "channel",
+          "type": "enum",
+          "nullable": true,
+          "doc": "Canal par lequel l'interaction a eu lieu.",
+          "has_default": true,
+          "default": null,
+          "enum_name": "CustomerChannel",
+          "enum_symbols": [
+            "CALL_CENTER",
+            "SHOP",
+            "APP",
+            "USSD",
+            "SMS",
+            "SOCIAL",
+            "WEB"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "nullable": true,
+          "doc": "Catégorie normalisée (NETWORK_QUALITY, BILLING, BUNDLE, MOBILE_MONEY, DEVICE, OTHER). NETWORK_QUALITY permet de corréler les réclamations aux dégradations réseau — clé de l'analyse de cause racine du churn.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "nullable": true,
+          "doc": "Texte libre saisi par l'agent. DONNÉE NON FIABLE : traitée comme contenu à analyser, jamais comme instruction (threat model §5.2). Peut contenir des PII saisies manuellement — scannée et masquée en silver.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "severity",
+          "type": "enum",
+          "nullable": true,
+          "doc": "Gravité déclarée de la réclamation.",
+          "has_default": true,
+          "default": null,
+          "enum_name": "ComplaintSeverity",
+          "enum_symbols": [
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "CRITICAL"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "resolution_status",
+          "type": "enum",
+          "nullable": true,
+          "doc": "État de traitement. CLOSED_UNRESOLVED est un signal de churn particulièrement fort.",
+          "has_default": true,
+          "default": null,
+          "enum_name": "ResolutionStatus",
+          "enum_symbols": [
+            "OPEN",
+            "IN_PROGRESS",
+            "RESOLVED",
+            "ESCALATED",
+            "CLOSED_UNRESOLVED"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "resolution_time_minutes",
+          "type": "int",
+          "nullable": true,
+          "doc": "Délai de résolution. Un délai long dégrade la satisfaction.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "minute",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "satisfaction_score",
+          "type": "int",
+          "nullable": true,
+          "doc": "Score NPS ou CSAT recueilli.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 10
+            }
+          ]
+        },
+        {
+          "name": "related_cell_id",
+          "type": "string",
+          "nullable": true,
+          "doc": "Cellule mise en cause dans une réclamation de qualité réseau. Relie directement le ressenti client à la performance technique.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "region",
+          "type": "string",
+          "nullable": true,
+          "doc": "Région de rattachement de l'abonné.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "in_ref",
+              "value": "regions"
+            }
+          ]
+        },
+        {
+          "name": "previous_plan",
+          "type": "string",
+          "nullable": true,
+          "doc": "Offre précédente lors d'un changement de plan.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "new_plan",
+          "type": "string",
+          "nullable": true,
+          "doc": "Nouvelle offre lors d'un changement de plan. Un passage vers une offre inférieure précède souvent une résiliation.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        }
+      ]
+    },
+    "data-session-v1": {
+      "name": "DataSession",
+      "namespace": "com.telecomx.data.v1",
+      "doc": "Session de données mobiles (PDP context / PDU session). Base du traffic analytics et de la mesure de qualité vécue par l'abonné.",
+      "owner": "oss-mediation",
+      "topic": "data.sessions",
+      "partition_key": "subscriber_id",
+      "freshness_seconds": 300,
+      "compatibility": "BACKWARD",
+      "classification": "P1",
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "UUID v7, unique per event. Deduplication key.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "event_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant de fin de session, en UTC.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "not_future"
+            }
+          ]
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event entered the platform, in UTC. Drives freshness.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "schema_version",
+          "type": "string",
+          "nullable": false,
+          "doc": "Semantic version of the contract, carried by the event for debugging.",
+          "has_default": true,
+          "default": "1.0.0",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "producer_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifier of the emitting system or adapter.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "tenant_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Tenant owning the event. A message without it is routed to the DLQ (ADR-016).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "tenants"
+            }
+          ]
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifiant technique de la session.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "subscriber_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "MSISDN de l'abonné. IDENTIFIANT DIRECT — tokenisé en subscriber_token.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "subscriber_token",
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "imei",
+          "type": "string",
+          "nullable": true,
+          "doc": "Identifiant d'appareil. IDENTIFIANT INDIRECT — tokenisé en device_token.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "indirect",
+          "tokenize_as": "device_token",
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "ip_address",
+          "type": "string",
+          "nullable": true,
+          "doc": "Adresse IP attribuée. IDENTIFIANT INDIRECT — tronquée au /24 en silver, jamais conservée entière.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "indirect",
+          "tokenize_as": null,
+          "transform": "truncate_ip_24",
+          "constraints": []
+        },
+        {
+          "name": "cell_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Cellule servante. Associé à l'abonné, constitue une donnée de localisation (P3).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "cells"
+            }
+          ]
+        },
+        {
+          "name": "technology",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Technologie radio utilisée pendant la session.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "SessionTechnology",
+          "enum_symbols": [
+            "G2",
+            "G3",
+            "G4",
+            "G5"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "apn",
+          "type": "string",
+          "nullable": false,
+          "doc": "Access Point Name (ex. internet, mms, iot). Distingue les usages.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "duration_seconds",
+          "type": "int",
+          "nullable": false,
+          "doc": "Durée de la session.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "second",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 86400
+            }
+          ]
+        },
+        {
+          "name": "download_mb",
+          "type": "double",
+          "nullable": false,
+          "doc": "Volume descendant échangé.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "megabyte",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "upload_mb",
+          "type": "double",
+          "nullable": false,
+          "doc": "Volume montant échangé.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "megabyte",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "total_volume_mb",
+          "type": "double",
+          "nullable": false,
+          "doc": "Volume total. Règle métier vérifiée en silver : total_volume_mb = download_mb + upload_mb (tolérance 0,01).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "megabyte",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "eq_sum",
+              "value": [
+                "download_mb",
+                "upload_mb"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "avg_throughput_mbps",
+          "type": "double",
+          "nullable": false,
+          "doc": "Débit moyen observé durant la session — mesure directe de la qualité vécue.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "megabit_per_second",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "termination_cause",
+          "type": "enum",
+          "nullable": false,
+          "doc": "NETWORK_FAILURE et HANDOVER_FAILURE sont des indicateurs de dégradation réseau.",
+          "has_default": true,
+          "default": "NORMAL",
+          "enum_name": "TerminationCause",
+          "enum_symbols": [
+            "NORMAL",
+            "TIMEOUT",
+            "QUOTA_EXHAUSTED",
+            "NETWORK_FAILURE",
+            "HANDOVER_FAILURE",
+            "USER_DETACH"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "bundle_code",
+          "type": "string",
+          "nullable": true,
+          "doc": "Forfait ayant financé la session, si applicable.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "charged_amount",
+          "type": "double",
+          "nullable": false,
+          "doc": "Montant facturé pour la session, hors forfait.",
+          "has_default": true,
+          "default": 0.0,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "xof",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "is_roaming",
+          "type": "boolean",
+          "nullable": false,
+          "doc": "Session réalisée en itinérance.",
+          "has_default": true,
+          "default": false,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        }
+      ]
+    },
+    "equipment-telemetry-v1": {
+      "name": "EquipmentTelemetry",
+      "namespace": "com.telecomx.infrastructure.v1",
+      "doc": "Télémétrie des équipements d'infrastructure (BBU, routeurs, alimentation, climatisation, groupes électrogènes). Source unique du modèle de maintenance prédictive.",
+      "owner": "field-operations",
+      "topic": "device.events",
+      "partition_key": "equipment_id",
+      "freshness_seconds": 300,
+      "compatibility": "BACKWARD",
+      "classification": "P4",
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "UUID v7, unique per event. Deduplication key.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "event_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event occurred in the real world, in UTC.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "not_future"
+            }
+          ]
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event entered the platform, in UTC. Drives freshness.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "schema_version",
+          "type": "string",
+          "nullable": false,
+          "doc": "Semantic version of the contract, carried by the event for debugging.",
+          "has_default": true,
+          "default": "1.0.0",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "producer_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifier of the emitting system or adapter.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "tenant_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Tenant owning the event. A message without it is routed to the DLQ (ADR-016).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "tenants"
+            }
+          ]
+        },
+        {
+          "name": "equipment_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifiant d'équipement (ex. ROUTER-082, BBU-014, GENSET-201).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "equipment"
+            }
+          ]
+        },
+        {
+          "name": "site_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Site hébergeant l'équipement.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "sites"
+            }
+          ]
+        },
+        {
+          "name": "equipment_type",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Catégorie d'équipement. Détermine le profil de défaillance attendu.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "EquipmentType",
+          "enum_symbols": [
+            "BBU",
+            "RRU",
+            "ROUTER",
+            "SWITCH",
+            "POWER_SUPPLY",
+            "BATTERY",
+            "GENSET",
+            "HVAC",
+            "MICROWAVE_LINK",
+            "FIBER_TERMINAL"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "vendor",
+          "type": "string",
+          "nullable": true,
+          "doc": "Constructeur. Certains modèles ont des profils de défaillance spécifiques.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "nullable": true,
+          "doc": "Référence du modèle. Certains modèles présentent des défaillances caractéristiques.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "temperature_celsius",
+          "type": "double",
+          "nullable": true,
+          "doc": "Température interne. Prédicteur de panne le plus fort, surtout combiné à une défaillance de climatisation.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "celsius",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": -20
+            },
+            {
+              "kind": "lte",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "cpu_utilization_pct",
+          "type": "double",
+          "nullable": true,
+          "doc": "Taux d'occupation processeur. Une saturation prolongée précède souvent une dégradation de service.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "percent",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 100
+            }
+          ]
+        },
+        {
+          "name": "memory_utilization_pct",
+          "type": "double",
+          "nullable": true,
+          "doc": "Taux d'occupation mémoire. Une croissance monotone signale une fuite mémoire.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "percent",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 100
+            }
+          ]
+        },
+        {
+          "name": "uptime_seconds",
+          "type": "long",
+          "nullable": false,
+          "doc": "Durée depuis le dernier redémarrage. Une remise à zéro inattendue signale un redémarrage non planifié.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "second",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "power_consumption_watts",
+          "type": "double",
+          "nullable": true,
+          "doc": "Consommation électrique instantanée. Une dérive est un indicateur d'usure.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "watt",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "input_voltage",
+          "type": "double",
+          "nullable": true,
+          "doc": "Tension d'alimentation. Les instabilités électriques sont une cause majeure de panne.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "volt",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "battery_level_pct",
+          "type": "double",
+          "nullable": true,
+          "doc": "Niveau de batterie de secours.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "percent",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 100
+            }
+          ]
+        },
+        {
+          "name": "battery_cycles",
+          "type": "int",
+          "nullable": true,
+          "doc": "Nombre de cycles de charge/décharge. Indicateur d'usure.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "crc_error_count",
+          "type": "long",
+          "nullable": true,
+          "doc": "Erreurs CRC sur les interfaces transport. Une croissance progressive annonce une dégradation de lien (fibre, faisceau hertzien).",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "packet_error_rate",
+          "type": "double",
+          "nullable": true,
+          "doc": "Taux d'erreur paquets sur les interfaces.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "percent",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 100
+            }
+          ]
+        },
+        {
+          "name": "link_utilization_pct",
+          "type": "double",
+          "nullable": true,
+          "doc": "Taux d'occupation du lien de transport. Une saturation du backhaul se manifeste ici avant de dégrader les KPI radio — signal clé de l'analyse de cause racine.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "percent",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 100
+            }
+          ]
+        },
+        {
+          "name": "fan_status",
+          "type": "enum",
+          "nullable": true,
+          "doc": "État de la ventilation. Une ventilation dégradée combinée à une température élevée est le scénario de panne le plus fréquent.",
+          "has_default": true,
+          "default": null,
+          "enum_name": "FanStatus",
+          "enum_symbols": [
+            "OK",
+            "DEGRADED",
+            "FAILED",
+            "NOT_APPLICABLE"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "operational_status",
+          "type": "enum",
+          "nullable": false,
+          "doc": "État opérationnel déclaré par l'équipement.",
+          "has_default": true,
+          "default": "NORMAL",
+          "enum_name": "OperationalStatus",
+          "enum_symbols": [
+            "NORMAL",
+            "DEGRADED",
+            "MAINTENANCE",
+            "FAULT",
+            "OFFLINE"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "days_since_maintenance",
+          "type": "int",
+          "nullable": true,
+          "doc": "Jours écoulés depuis la dernière intervention. Feature directe du modèle de maintenance prédictive.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "day",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    "mobilemoney-transaction-v1": {
+      "name": "MobileMoneyTransaction",
+      "namespace": "com.telecomx.mobilemoney.v1",
+      "doc": "Transaction Mobile Money. Donnée financière soumise à des exigences d'audit renforcées : rétention 90 jours sur Kafka, compatibilité FULL, traçabilité intégrale.",
+      "owner": "mobile-money-platform",
+      "topic": "mobilemoney.transactions",
+      "partition_key": "sender_account",
+      "freshness_seconds": 60,
+      "compatibility": "FULL",
+      "classification": "P1",
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "UUID v7, unique per event. Deduplication key.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "event_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event occurred in the real world, in UTC.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "not_future"
+            }
+          ]
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event entered the platform, in UTC. Drives freshness.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "schema_version",
+          "type": "string",
+          "nullable": false,
+          "doc": "Semantic version of the contract, carried by the event for debugging.",
+          "has_default": true,
+          "default": "1.0.0",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "producer_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifier of the emitting system or adapter.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "tenant_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Tenant owning the event. A message without it is routed to the DLQ (ADR-016).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "tenants"
+            }
+          ]
+        },
+        {
+          "name": "transaction_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifiant unique de transaction, au format TRX-YYYYMMDD-NNNNNNNN.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "transaction_type",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Nature de l'opération. CASH_OUT et P2P concentrent l'essentiel des schémas de fraude.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "TransactionType",
+          "enum_symbols": [
+            "P2P",
+            "CASH_IN",
+            "CASH_OUT",
+            "MERCHANT_PAYMENT",
+            "BILL_PAYMENT",
+            "AIRTIME_PURCHASE",
+            "BULK_DISBURSEMENT",
+            "REVERSAL"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "sender_account",
+          "type": "string",
+          "nullable": false,
+          "doc": "Compte émetteur. IDENTIFIANT DIRECT — tokenisé en sender_token dès silver.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "sender_token",
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "receiver_account",
+          "type": "string",
+          "nullable": false,
+          "doc": "Compte destinataire. IDENTIFIANT DIRECT — tokenisé en receiver_token.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "receiver_token",
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "merchant_id",
+          "type": "string",
+          "nullable": true,
+          "doc": "Identifiant du marchand pour les paiements. Non tokenisé : entité commerciale, pas personne physique.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "amount",
+          "type": "decimal",
+          "nullable": false,
+          "doc": "Montant de la transaction. Type decimal et non double : aucune imprécision flottante tolérée sur une donnée financière.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": 18,
+          "scale": 2,
+          "unit": "xof",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gt",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "fee",
+          "type": "decimal",
+          "nullable": false,
+          "doc": "Frais prélevés.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": 18,
+          "scale": 2,
+          "unit": "xof",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "nullable": false,
+          "doc": "Code ISO 4217.",
+          "has_default": true,
+          "default": "XOF",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Issue de la transaction. BLOCKED indique un rejet par les contrôles anti-fraude.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "TransactionStatus",
+          "enum_symbols": [
+            "COMPLETED",
+            "PENDING",
+            "FAILED",
+            "REVERSED",
+            "BLOCKED"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "failure_reason",
+          "type": "string",
+          "nullable": true,
+          "doc": "Motif normalisé en cas d'échec (solde insuffisant, compte suspendu, limite dépassée...).",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "channel",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Canal d'initiation. Un changement brutal de canal habituel est un signal de fraude.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "TransactionChannel",
+          "enum_symbols": [
+            "USSD",
+            "APP",
+            "AGENT",
+            "API",
+            "WEB"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "agent_id",
+          "type": "string",
+          "nullable": true,
+          "doc": "Agent Mobile Money pour les opérations CASH_IN / CASH_OUT.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "location_cell_id",
+          "type": "string",
+          "nullable": true,
+          "doc": "Cellule d'où la transaction a été initiée. GÉNÉRALISATION de la localisation GPS (politique PII §3.2) : jamais de coordonnées précises.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "region",
+          "type": "string",
+          "nullable": true,
+          "doc": "Région dérivée de la cellule. Un écart géographique inhabituel est un signal de fraude majeur.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "device_id",
+          "type": "string",
+          "nullable": true,
+          "doc": "Empreinte d'appareil. IDENTIFIANT INDIRECT — tokenisé. Un changement d'appareil précédant une transaction inhabituelle est un signal fort.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "indirect",
+          "tokenize_as": "device_token",
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "sender_balance_before",
+          "type": "decimal",
+          "nullable": true,
+          "doc": "Solde avant opération. Permet de détecter les vidages de compte.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": 18,
+          "scale": 2,
+          "unit": "xof",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "is_cross_border",
+          "type": "boolean",
+          "nullable": false,
+          "doc": "Transaction transfrontalière.",
+          "has_default": true,
+          "default": false,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        }
+      ]
+    },
+    "network-alarms-v1": {
+      "name": "NetworkAlarm",
+      "namespace": "com.telecomx.network.v1",
+      "doc": "Alarme émise par un équipement réseau ou par la plateforme elle-même (anomalie détectée par ML). Topic à faible débit mais forte valeur : rétention 30 jours.",
+      "owner": "network-operations",
+      "topic": "network.alarms",
+      "partition_key": "site_id",
+      "freshness_seconds": 60,
+      "compatibility": "FULL",
+      "classification": "P4",
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "UUID v7, unique per event. Deduplication key.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "event_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant de déclenchement de l'alarme, en UTC.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "not_future"
+            }
+          ]
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event entered the platform, in UTC. Drives freshness.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "schema_version",
+          "type": "string",
+          "nullable": false,
+          "doc": "Semantic version of the contract, carried by the event for debugging.",
+          "has_default": true,
+          "default": "1.0.0",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "producer_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifier of the emitting system or adapter.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "tenant_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Tenant owning the event. A message without it is routed to the DLQ (ADR-016).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "tenants"
+            }
+          ]
+        },
+        {
+          "name": "alarm_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifiant unique de l'occurrence d'alarme, au format ALM-YYYYMMDD-NNNNNN.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "alarm_code",
+          "type": "string",
+          "nullable": false,
+          "doc": "Code normalisé du type d'alarme (ex. TRX_FAILURE, BACKHAUL_CONGESTION, VSWR_HIGH).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "alarm_types"
+            }
+          ]
+        },
+        {
+          "name": "severity",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Sévérité selon la nomenclature ITU-T X.733.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "AlarmSeverity",
+          "enum_symbols": [
+            "CRITICAL",
+            "MAJOR",
+            "MINOR",
+            "WARNING",
+            "INFO"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "domain",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Domaine technique concerné. Détermine l'équipe de traitement et la procédure applicable.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "AlarmDomain",
+          "enum_symbols": [
+            "RADIO",
+            "TRANSPORT",
+            "CORE",
+            "POWER",
+            "ENVIRONMENT",
+            "PLATFORM"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "site_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Site concerné par l'alarme.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "sites"
+            }
+          ]
+        },
+        {
+          "name": "cell_id",
+          "type": "string",
+          "nullable": true,
+          "doc": "Cellule concernée si l'alarme est de portée cellulaire. Nul pour une alarme de site ou d'équipement.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "equipment_id",
+          "type": "string",
+          "nullable": true,
+          "doc": "Équipement concerné si identifiable (ex. ROUTER-082, BBU-014).",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "region",
+          "type": "string",
+          "nullable": false,
+          "doc": "Région du site. Permet l'agrégation géographique des incidents.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "regions"
+            }
+          ]
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "nullable": false,
+          "doc": "Libellé textuel de l'alarme. ATTENTION : champ de texte libre provenant d'un système externe — traité comme donnée NON FIABLE et jamais interpolé dans la zone d'instructions d'un prompt (voir threat model §5.2).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "probable_cause",
+          "type": "string",
+          "nullable": true,
+          "doc": "Cause probable déclarée par l'équipement, selon la nomenclature constructeur.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "nullable": false,
+          "doc": "État courant de l'alarme dans son cycle de vie.",
+          "has_default": true,
+          "default": "ACTIVE",
+          "enum_name": "AlarmStatus",
+          "enum_symbols": [
+            "ACTIVE",
+            "ACKNOWLEDGED",
+            "CLEARED"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "cleared_timestamp",
+          "type": "timestamp-micros",
+          "nullable": true,
+          "doc": "Instant de résolution, en UTC. Permet de calculer la durée de l'alarme.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "source",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Origine de l'alarme. ANOMALY_DETECTION identifie les alarmes générées par le modèle ML de la plateforme — c'est ce qui déclenche l'Operations Agent.",
+          "has_default": true,
+          "default": "EMS",
+          "enum_name": "AlarmSource",
+          "enum_symbols": [
+            "EMS",
+            "ANOMALY_DETECTION",
+            "MANUAL",
+            "THRESHOLD"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "anomaly_score",
+          "type": "double",
+          "nullable": true,
+          "doc": "Score d'anomalie [0,1] lorsque source = ANOMALY_DETECTION.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "correlation_id",
+          "type": "string",
+          "nullable": true,
+          "doc": "Regroupe les alarmes issues d'une même cause racine (une panne de site en génère des dizaines).",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        }
+      ]
+    },
+    "network-metrics-v1": {
+      "name": "NetworkMetrics",
+      "namespace": "com.telecomx.network.v1",
+      "doc": "Métriques de performance radio agrégées par cellule sur une fenêtre glissante de 60 secondes. Produit par l'EMS radio via l'adaptateur d'ingestion.",
+      "owner": "network-operations",
+      "topic": "network.metrics",
+      "partition_key": "cell_id",
+      "freshness_seconds": 120,
+      "compatibility": "BACKWARD",
+      "classification": "P4",
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "UUID v7 unique. Clé de déduplication (FR-M2-003).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "event_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant de fin de la fenêtre de mesure, en UTC. Base du partitionnement et du watermarking.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "not_future"
+            }
+          ]
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant d'entrée dans la plateforme, en UTC. Sert au calcul de fraîcheur.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "schema_version",
+          "type": "string",
+          "nullable": false,
+          "doc": "Version sémantique du contrat, portée par l'événement pour faciliter le débogage.",
+          "has_default": true,
+          "default": "1.0.0",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "producer_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifiant du système ou de l'adaptateur émetteur (ex. ems-radio-bamako-01).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "tenant_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifiant du tenant. OBLIGATOIRE — un message sans tenant est rejeté en DLQ (ADR-016).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "tenants"
+            }
+          ]
+        },
+        {
+          "name": "cell_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifiant de cellule au format CELL-NNNN.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "pattern",
+              "value": "^CELL-[0-9]{4}$"
+            },
+            {
+              "kind": "in_ref",
+              "value": "cells"
+            }
+          ]
+        },
+        {
+          "name": "site_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Site hébergeant la cellule, au format SITE-NNN.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "pattern",
+              "value": "^SITE-[0-9]{3,4}$"
+            },
+            {
+              "kind": "in_ref",
+              "value": "sites"
+            }
+          ]
+        },
+        {
+          "name": "region",
+          "type": "string",
+          "nullable": false,
+          "doc": "Région administrative. Dimension de partitionnement en silver.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "regions"
+            }
+          ]
+        },
+        {
+          "name": "technology",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Technologie radio. Préfixe G car un symbole Avro ne peut pas commencer par un chiffre.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "Technology",
+          "enum_symbols": [
+            "G2",
+            "G3",
+            "G4",
+            "G5"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "traffic_mb",
+          "type": "double",
+          "nullable": false,
+          "doc": "Volume de données échangées durant la fenêtre.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "megabyte",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "active_users",
+          "type": "int",
+          "nullable": false,
+          "doc": "Nombre d'utilisateurs simultanément rattachés à la cellule.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "count",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte_ref",
+              "value": "cells.capacity_users"
+            }
+          ]
+        },
+        {
+          "name": "latency_ms",
+          "type": "double",
+          "nullable": false,
+          "doc": "Latence aller-retour moyenne observée.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "millisecond",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 5000
+            }
+          ]
+        },
+        {
+          "name": "packet_loss_pct",
+          "type": "double",
+          "nullable": false,
+          "doc": "Taux de perte de paquets.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "percent",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 100
+            }
+          ]
+        },
+        {
+          "name": "drop_rate_pct",
+          "type": "double",
+          "nullable": false,
+          "doc": "Taux d'appels interrompus (Call Drop Rate).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "percent",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 100
+            }
+          ]
+        },
+        {
+          "name": "call_setup_failure_pct",
+          "type": "double",
+          "nullable": false,
+          "doc": "Taux d'échec d'établissement d'appel.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "percent",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 100
+            }
+          ]
+        },
+        {
+          "name": "throughput_mbps",
+          "type": "double",
+          "nullable": false,
+          "doc": "Débit utile moyen par utilisateur.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "megabit_per_second",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "signal_strength_dbm",
+          "type": "double",
+          "nullable": false,
+          "doc": "Puissance de signal moyenne reçue (RSRP en 4G/5G, RSCP en 3G).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "dbm",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": -140
+            },
+            {
+              "kind": "lte",
+              "value": -40
+            }
+          ]
+        },
+        {
+          "name": "prb_utilization_pct",
+          "type": "double",
+          "nullable": false,
+          "doc": "Taux d'occupation des Physical Resource Blocks. Indicateur principal de saturation radio.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "percent",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 100
+            }
+          ]
+        },
+        {
+          "name": "availability_pct",
+          "type": "double",
+          "nullable": false,
+          "doc": "Disponibilité de la cellule sur la fenêtre.",
+          "has_default": true,
+          "default": 100.0,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "percent",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 100
+            }
+          ]
+        }
+      ]
+    },
+    "recharge-v1": {
+      "name": "RechargeEvent",
+      "namespace": "com.telecomx.billing.v1",
+      "doc": "Rechargement de crédit prépayé. La fréquence et le montant des recharges sont parmi les prédicteurs les plus forts du churn.",
+      "owner": "billing",
+      "topic": "recharge.events",
+      "partition_key": "subscriber_id",
+      "freshness_seconds": 120,
+      "compatibility": "BACKWARD",
+      "classification": "P1",
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "UUID v7, unique per event. Deduplication key.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "event_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event occurred in the real world, in UTC.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "not_future"
+            }
+          ]
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event entered the platform, in UTC. Drives freshness.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "schema_version",
+          "type": "string",
+          "nullable": false,
+          "doc": "Semantic version of the contract, carried by the event for debugging.",
+          "has_default": true,
+          "default": "1.0.0",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "producer_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifier of the emitting system or adapter.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "tenant_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Tenant owning the event. A message without it is routed to the DLQ (ADR-016).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "tenants"
+            }
+          ]
+        },
+        {
+          "name": "recharge_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifiant unique de l'opération de recharge.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "subscriber_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "MSISDN rechargé. IDENTIFIANT DIRECT — tokenisé.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "subscriber_token",
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "amount",
+          "type": "decimal",
+          "nullable": false,
+          "doc": "Montant rechargé.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": 18,
+          "scale": 2,
+          "unit": "xof",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gt",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "channel",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Canal de rechargement. MOBILE_MONEY est le canal dominant.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "RechargeChannel",
+          "enum_symbols": [
+            "SCRATCH_CARD",
+            "MOBILE_MONEY",
+            "AGENT",
+            "BANK",
+            "APP",
+            "USSD",
+            "ATM"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "agent_id",
+          "type": "string",
+          "nullable": true,
+          "doc": "Agent ou point de vente. Un agent atypique est un signal de fraude.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "balance_after",
+          "type": "decimal",
+          "nullable": true,
+          "doc": "Solde après rechargement.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": 18,
+          "scale": 2,
+          "unit": "xof",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Issue de l'opération.",
+          "has_default": true,
+          "default": "SUCCESS",
+          "enum_name": "RechargeStatus",
+          "enum_symbols": [
+            "SUCCESS",
+            "FAILED",
+            "PENDING",
+            "REVERSED"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "region",
+          "type": "string",
+          "nullable": true,
+          "doc": "Région du point de recharge.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "is_first_recharge",
+          "type": "boolean",
+          "nullable": false,
+          "doc": "Première recharge de l'abonné — marque l'activation effective.",
+          "has_default": true,
+          "default": false,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        }
+      ]
+    },
+    "sms-v1": {
+      "name": "SmsEvent",
+      "namespace": "com.telecomx.messaging.v1",
+      "doc": "Métadonnées d'un SMS. Le CONTENU du message n'est JAMAIS collecté (secret des correspondances) — seules les métadonnées le sont. Topic soumis à des pics extrêmes (×28 au Nouvel An).",
+      "owner": "oss-mediation",
+      "topic": "sms.events",
+      "partition_key": "sender_id",
+      "freshness_seconds": 300,
+      "compatibility": "BACKWARD",
+      "classification": "P1",
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "UUID v7, unique per event. Deduplication key.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "event_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event occurred in the real world, in UTC.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "not_future"
+            }
+          ]
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event entered the platform, in UTC. Drives freshness.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "schema_version",
+          "type": "string",
+          "nullable": false,
+          "doc": "Semantic version of the contract, carried by the event for debugging.",
+          "has_default": true,
+          "default": "1.0.0",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "producer_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifier of the emitting system or adapter.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "tenant_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Tenant owning the event. A message without it is routed to the DLQ (ADR-016).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "tenants"
+            }
+          ]
+        },
+        {
+          "name": "message_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifiant technique du message. Le CONTENU n'est jamais collecté.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "sender_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "MSISDN de l'émetteur, ou nom court pour un SMS applicatif. IDENTIFIANT DIRECT — tokenisé.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "subscriber_token",
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "receiver_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "MSISDN du destinataire. IDENTIFIANT DIRECT — tokenisé.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "receiver_token",
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "cell_id",
+          "type": "string",
+          "nullable": true,
+          "doc": "Cellule d'émission.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "direction",
+          "type": "enum",
+          "nullable": false,
+          "doc": "MO = envoyé par l'abonné, MT = reçu par l'abonné.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "SmsDirection",
+          "enum_symbols": [
+            "MO",
+            "MT"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "sms_type",
+          "type": "enum",
+          "nullable": false,
+          "doc": "A2P (application-to-person) et OTP sont exclus des analyses d'usage personnel.",
+          "has_default": true,
+          "default": "P2P",
+          "enum_name": "SmsType",
+          "enum_symbols": [
+            "P2P",
+            "A2P",
+            "PROMOTIONAL",
+            "OTP",
+            "SYSTEM"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Statut de remise du message.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "SmsStatus",
+          "enum_symbols": [
+            "DELIVERED",
+            "FAILED",
+            "PENDING",
+            "EXPIRED",
+            "REJECTED"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "segment_count",
+          "type": "int",
+          "nullable": false,
+          "doc": "Nombre de segments (un SMS long est découpé). Sert à la facturation.",
+          "has_default": true,
+          "default": 1,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 1
+            },
+            {
+              "kind": "lte",
+              "value": 10
+            }
+          ]
+        },
+        {
+          "name": "charged_amount",
+          "type": "double",
+          "nullable": false,
+          "doc": "Montant facturé pour l'envoi.",
+          "has_default": true,
+          "default": 0.0,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "xof",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "is_international",
+          "type": "boolean",
+          "nullable": false,
+          "doc": "Message à destination de l'international.",
+          "has_default": true,
+          "default": false,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        }
+      ]
+    },
+    "ussd-v1": {
+      "name": "UssdEvent",
+      "namespace": "com.telecomx.messaging.v1",
+      "doc": "Session USSD (menus interactifs *144#, etc.). Canal principal d'accès aux services en zone à faible équipement smartphone : les abandons de session sont un indicateur d'insatisfaction.",
+      "owner": "oss-mediation",
+      "topic": "ussd.events",
+      "partition_key": "subscriber_id",
+      "freshness_seconds": 300,
+      "compatibility": "BACKWARD",
+      "classification": "P1",
+      "fields": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "UUID v7, unique per event. Deduplication key.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "unique"
+            }
+          ]
+        },
+        {
+          "name": "event_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event occurred in the real world, in UTC.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "not_future"
+            }
+          ]
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "timestamp-micros",
+          "nullable": false,
+          "doc": "Instant the event entered the platform, in UTC. Drives freshness.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "schema_version",
+          "type": "string",
+          "nullable": false,
+          "doc": "Semantic version of the contract, carried by the event for debugging.",
+          "has_default": true,
+          "default": "1.0.0",
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "producer_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifier of the emitting system or adapter.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "tenant_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Tenant owning the event. A message without it is routed to the DLQ (ADR-016).",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            },
+            {
+              "kind": "in_ref",
+              "value": "tenants"
+            }
+          ]
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "Identifiant technique de la session USSD.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "subscriber_id",
+          "type": "string",
+          "nullable": false,
+          "doc": "MSISDN. IDENTIFIANT DIRECT — tokenisé.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "direct",
+          "tokenize_as": "subscriber_token",
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "not_null"
+            }
+          ]
+        },
+        {
+          "name": "service_code",
+          "type": "string",
+          "nullable": false,
+          "doc": "Code USSD composé (ex. *144#). Identifie le service consulté.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "menu_path",
+          "type": "string",
+          "nullable": true,
+          "doc": "Chemin de navigation dans l'arborescence (ex. 144>2>1). Permet d'analyser les parcours et les points d'abandon.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "service_category",
+          "type": "enum",
+          "nullable": false,
+          "doc": "Catégorie fonctionnelle du service consulté.",
+          "has_default": true,
+          "default": "OTHER",
+          "enum_name": "UssdCategory",
+          "enum_symbols": [
+            "BALANCE",
+            "BUNDLE_PURCHASE",
+            "MOBILE_MONEY",
+            "CUSTOMER_SERVICE",
+            "PROMOTION",
+            "TRANSFER",
+            "OTHER"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "cell_id",
+          "type": "string",
+          "nullable": true,
+          "doc": "Cellule servante durant la session.",
+          "has_default": true,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        },
+        {
+          "name": "duration_seconds",
+          "type": "int",
+          "nullable": false,
+          "doc": "Durée totale de la session.",
+          "has_default": false,
+          "default": null,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": "second",
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            },
+            {
+              "kind": "lte",
+              "value": 600
+            }
+          ]
+        },
+        {
+          "name": "step_count",
+          "type": "int",
+          "nullable": false,
+          "doc": "Nombre d'interactions dans la session.",
+          "has_default": true,
+          "default": 1,
+          "enum_name": null,
+          "enum_symbols": [],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": [
+            {
+              "kind": "gte",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "nullable": false,
+          "doc": "ABANDONED et TIMEOUT alimentent l'analyse d'expérience client et le modèle de churn.",
+          "has_default": false,
+          "default": null,
+          "enum_name": "UssdStatus",
+          "enum_symbols": [
+            "COMPLETED",
+            "ABANDONED",
+            "TIMEOUT",
+            "FAILED",
+            "NETWORK_ERROR"
+          ],
+          "precision": null,
+          "scale": null,
+          "unit": null,
+          "pii": "none",
+          "tokenize_as": null,
+          "transform": null,
+          "constraints": []
+        }
+      ]
+    }
+  }
+}

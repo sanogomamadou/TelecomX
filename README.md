@@ -180,6 +180,7 @@ Chaque étape est **tracée** (une seule trace OpenTelemetry de bout en bout) et
 - [Threat model](docs/security/threat-model.md) — STRIDE + menaces spécifiques aux agents IA
 - [Politique PII](docs/security/pii-policy.md) — classification, tokenisation, rétention
 
+
 ---
 
 ## 🧭 Principes de conception

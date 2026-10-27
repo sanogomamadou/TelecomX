@@ -52,7 +52,20 @@ telecom-common = { workspace = true }
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = ["*.ipynb", "data-platform/dbt/target", ".venv"]
+# Generated code is excluded from lint and format: it is regenerated, never edited,
+# and CI compares it byte for byte with the generator output. It is still type-checked
+# (mypy) and exercised by tests, so being excluded here costs no verification.
+#
+# docs/ is excluded too: ruff formats the Python snippets embedded in Markdown, and the
+# ADRs contain illustrative snippets whose alignment and trailing comments are chosen
+# for the reader, not for a formatter. They are documentation, not code to normalise.
+extend-exclude = [
+    "*.ipynb",
+    "data-platform/dbt/target",
+    ".venv",
+    "libs/telecom-common/src/telecom_common/contracts/generated",
+    "docs",
+]
 
 [tool.ruff.lint]
 select = [
