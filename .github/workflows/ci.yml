@@ -90,10 +90,34 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Scan for secrets
-        uses: gitleaks/gitleaks-action@v2
+      # The gitleaks action scans the range "<first commit>^..<last commit>" on a push.
+      # The root commit has no parent, so on the very first push git fails, the action
+      # reports "scanned ~0 bytes" and exits with an error without reading anything.
+      # Running the tool itself scans the whole history, and a scan that cannot read
+      # anything is made to fail loudly (see the check on the commit count below).
+      - name: Install gitleaks (version pinned, checksum verified)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: "8.24.3"
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          curl -sSfL -o gitleaks.tar.gz "${base}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o checksums.txt "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" checksums.txt | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+      - name: Scan the whole history for secrets
+        # `shell: bash` enables pipefail. Without it GitHub runs `bash -e`, the pipeline
+        # below would return tee's exit code, and a leak found by gitleaks would pass.
+        shell: bash
+        run: |
+          expected=$(git rev-list --count HEAD)
+          echo "Commits to scan: ${expected}"
+          ./gitleaks detect --source . --redact --verbose --exit-code 2 --no-banner 2>&1 | tee scan.log
+          scanned=$(grep -oE '[0-9]+ commits scanned' scan.log | grep -oE '[0-9]+' | head -1 || true)
+          echo "Commits scanned: ${scanned:-0}"
+          if [ "${scanned:-0}" -lt "${expected}" ]; then
+            echo "::error::gitleaks scanned ${scanned:-0} of ${expected} commits: refusing to report success."
+            exit 1
+          fi
 
   lint:
     name: Lint & format
