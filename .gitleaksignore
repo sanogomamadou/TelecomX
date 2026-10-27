@@ -1,0 +1,18 @@
+# Reviewed false positives of the secret scan (gitleaks).
+#
+# Each entry is ONE finding, identified by its fingerprint
+# (commit : file : rule : line). It is narrower than ignoring a file or a rule: any other
+# secret, including in these same files, is still reported.
+#
+# To add an entry: reproduce the finding, read what it matched, and write here WHY it is
+# not a secret. An entry without a justification must not be merged.
+
+# .env.example, S3_SECRET_KEY= (empty on purpose: the template forces the developer to
+# choose a value). The generic-api-key rule lets \s span the line break and takes the
+# FOLLOWING line, S3_REGION=us-east-1, for the secret.
+24223fb769693e11167c6502087d236df375dd4c:.env.example:generic-api-key:52
+
+# tests/unit/telecom_common/test_pii.py, a made-up token string kept in the list of
+# values that the PII detector must NOT flag, to prove it does not mistake a tokenized
+# identifier for a phone number. It is not derived from any key.
+97b41b4b50b69beff6404a59ed6e362f01fdf309:tests/unit/telecom_common/test_pii.py:generic-api-key:68
