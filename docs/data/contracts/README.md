@@ -238,6 +238,21 @@ classe de caractères n'est pas un séparateur : `pattern:^SITE-[0-9]{3,4}$` est
 Un nom inconnu, un argument manquant ou une borne incohérente (`gte:10,lte:5`) **fait échouer la
 génération** avec le nom du contrat et du champ.
 
+### Appliquer `in_ref` et `lte_ref` : le catalogue de référence
+
+Ces deux règles sont appliquées par `ReferenceCatalog.check_record(contrat, événement)`
+(`telecom_common.reference`), contre les [seeds de référence](../../../data-platform/dbt/seeds/README.md).
+
+| Règle | Vérification | Portée |
+|---|---|---|
+| `in_ref:cells` | la valeur existe dans la table `cells` | **du tenant de l'événement** : une cellule d'un tenant n'existe pas pour un autre |
+| `lte_ref:cells.capacity_users` | la valeur ne dépasse pas la colonne de la ligne désignée | idem |
+
+> **Quelle ligne désigne `lte_ref` ?** `lte_ref:cells.capacity_users` nomme une *colonne* mais pas
+> une *ligne*. Convention : la ligne est celle désignée par le champ du **même enregistrement** qui
+> porte `in_ref` sur la **même table**. Pour `active_users`, c'est `cell_id`. Si un contrat rend cela
+> ambigu (aucun champ, ou plusieurs), la vérification le signale au lieu de deviner.
+
 ---
 
 ## 8. Vérifications automatisées

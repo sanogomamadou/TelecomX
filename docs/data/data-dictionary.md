@@ -86,7 +86,7 @@ supprimée silencieusement (voir [architecture données §6.3](../architecture/0
 | `capacity_users` | int | **Capacité en utilisateurs simultanés** — fonde la règle `active_users ≤ cell_capacity` |
 | `is_active` | boolean | Cellule en service |
 
-### `ref.equipment` — ~4 800 lignes
+### `ref.equipment` — 8 492 lignes
 
 | Colonne | Type | Description |
 |---|---|---|
@@ -100,7 +100,14 @@ supprimée silencieusement (voir [architecture données §6.3](../architecture/0
 
 ### `ref.bundles`, `ref.alarm_types`, `ref.technologies`, `ref.tenants`
 
-Référentiels complémentaires (~170 lignes au total), chargés en seed dbt et versionnés.
+Référentiels complémentaires, chargés en seed dbt et versionnés : `ref.tenants` (3 lignes),
+`ref.technologies` (4), `ref.bundles` (28) et `ref.alarm_types` (51, avec la colonne `sop_ref` qui
+désigne la procédure d'exploitation à suivre).
+
+> 📌 Les ordres de grandeur annoncés en Phase 0 (« ~4 800 équipements », « ~40 forfaits »,
+> « ~120 alarmes ») étaient des estimations. Les valeurs ci-dessus sont celles des fichiers générés,
+> qui font foi. Le parc de 8 492 équipements est cohérent avec le débit de ~40 messages/s annoncé
+> pour `device.events` : chaque équipement émet environ toutes les 3,5 minutes.
 
 ---
 

@@ -7,7 +7,7 @@
 
 [![Phase](https://img.shields.io/badge/phase-0%20%C2%B7%20Product%20%26%20Architecture-blue)](docs/product/PRD.md)
 [![Contrats](https://img.shields.io/badge/contrats-11%2F11%20valides-success)](docs/data/contracts/README.md)
-[![ADR](https://img.shields.io/badge/ADR-17-informational)](docs/adr/README.md)
+[![ADR](https://img.shields.io/badge/ADR-18-informational)](docs/adr/README.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)](LICENSE)
 
 ---
@@ -147,7 +147,7 @@ Chaque étape est **tracée** (une seule trace OpenTelemetry de bout en bout) et
 | Phase | Contenu | Statut |
 |---|---|---|
 | **0** | Product & Architecture — PRD, SRS, 17 ADR, threat model, contrats, SLO | ✅ **Terminée** |
-| **1** | Data Platform — générateurs, Kafka, Spark, Iceberg, Trino, dbt | 🔄 **En cours** — lots 1.1 (bibliothèque socle) et 1.2 (génération de code depuis les contrats) terminés |
+| **1** | Data Platform — générateurs, Kafka, Spark, Iceberg, Trino, dbt | 🔄 **En cours** — lots 1.1 (bibliothèque socle), 1.2 (génération de code depuis les contrats) et 1.3 (référentiels synthétiques) terminés |
 | **2** | Data Quality & Governance — Schema Registry, DQ gates, lineage, PII | ⏳ |
 | **3** | ML Platform — 5 modèles, MLflow, serving, drift | ⏳ |
 | **4** | Agent Platform — 8 agents, tools, RAG, mémoire, HITL, évaluation | ⏳ |
@@ -170,7 +170,7 @@ Chaque étape est **tracée** (une seule trace OpenTelemetry de bout en bout) et
 - [Données](docs/architecture/02-data-architecture.md) — zones, partitionnement, qualité, lineage
 - [Sécurité](docs/architecture/03-security-architecture.md) — modèle de confiance, 5 couches de contrôle
 - [IA](docs/architecture/04-ai-architecture.md) — ML vs LLM, agents, tools, RAG, évaluation
-- [**17 ADR**](docs/adr/README.md) — chaque décision structurante, ses alternatives et ses conséquences
+- [**18 ADR**](docs/adr/README.md) — chaque décision structurante, ses alternatives et ses conséquences
 
 ### Données
 - [Contrats](docs/data/contracts/README.md) — gouvernance, évolution de schéma, DLQ

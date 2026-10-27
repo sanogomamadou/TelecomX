@@ -65,10 +65,10 @@ Chargés en seed dbt, versionnés dans Git, sans passage par Kafka :
 | `ref.regions` | code, nom, population, typologie | 9 |
 | `ref.sites` | site_id, région, coordonnées, type, date de mise en service | 1 610 |
 | `ref.cells` | cell_id, site_id, technologie, bande, **capacité**, azimut | 4 821 |
-| `ref.equipment` | equipment_id, site_id, type, modèle, date d'installation | ~4 800 |
+| `ref.equipment` | equipment_id, site_id, type, modèle, date d'installation | 8 492 |
 | `ref.technologies` | 2G/3G/4G/5G, débit théorique, latence de référence | 4 |
-| `ref.bundles` | code, libellé, volume, prix, validité | ~40 |
-| `ref.alarm_types` | code, libellé, sévérité, domaine | ~120 |
+| `ref.bundles` | code, libellé, volume, prix, validité | 28 |
+| `ref.alarm_types` | code, libellé, sévérité, domaine, procédure | 51 |
 
 > La `capacity_mb_per_hour` de `ref.cells` est indispensable : elle transforme une prévision de
 > trafic en **prévision de saturation** (UC-02), et fonde la règle de qualité

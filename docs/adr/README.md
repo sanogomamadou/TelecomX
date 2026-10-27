@@ -37,6 +37,7 @@ envisagées, la décision retenue et ses conséquences — y compris négatives.
 | [015](ADR-015-data-contracts.md) | Avro + Schema Registry pour les contrats de données | ✅ Accepted | Gouvernance | 2 |
 | [016](ADR-016-multi-tenancy.md) | Multi-tenancy par isolation logique avec `tenant_id` | ✅ Accepted | Architecture | 0 |
 | [017](ADR-017-observability-stack.md) | OpenTelemetry comme standard d'instrumentation unique | ✅ Accepted | Observabilité | 7 |
+| [018](ADR-018-reference-data.md) | Données de référence synthétiques, déterministes et versionnées comme seeds | ✅ Accepted | Données | 1 |
 
 ## Décisions à réexaminer
 
