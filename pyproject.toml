@@ -17,6 +17,7 @@ dev = [
     # import them without a build step, and so that an edit is picked up
     # immediately. Add each new member here as it is created.
     "telecom-common",
+    "telecomx-generators",
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "pytest-asyncio>=0.24",
@@ -34,17 +35,18 @@ dev = [
 # Members are added as each component is implemented; uv requires every listed
 # member to carry a pyproject.toml, so declaring future ones up front breaks
 # `uv sync`. Planned additions, in build order:
-#   data-platform/generators  (Phase 1.4)
 #   data-platform/spark       (Phase 1.7, pinned to Python 3.11 for PySpark)
 #   ml-platform               (Phase 3)
 #   agents                    (Phase 4)
 #   apps/api                  (Phase 5)
 members = [
     "libs/telecom-common",
+    "data-platform/generators",
 ]
 
 [tool.uv.sources]
 telecom-common = { workspace = true }
+telecomx-generators = { workspace = true }
 
 # ---------------------------------------------------------------------------
 # Ruff — lint + format (replaces flake8, black, isort, pyupgrade, bandit)
@@ -98,7 +100,7 @@ ignore = [
 "**/conftest.py" = ["ARG"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["telecom_common", "agents", "ml_platform"]
+known-first-party = ["telecom_common", "telecomx_generators", "agents", "ml_platform"]
 
 [tool.ruff.format]
 quote-style = "double"

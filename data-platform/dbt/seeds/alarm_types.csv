@@ -1,0 +1,52 @@
+alarm_code,label,domain,default_severity,sop_ref
+CELL_DOWN,Cellule hors service,RADIO,CRITICAL,SOP-NET-001
+SECTOR_OUTAGE,Panne de secteur,RADIO,MAJOR,SOP-NET-002
+TRX_FAILURE,Défaillance d'émetteur-récepteur,RADIO,MAJOR,SOP-NET-003
+RRU_COMM_LOST,Communication perdue avec l'unité radio,RADIO,MAJOR,SOP-NET-004
+VSWR_HIGH,Taux d'ondes stationnaires élevé,RADIO,MINOR,SOP-NET-005
+PIM_DETECTED,Intermodulation passive détectée,RADIO,MINOR,SOP-NET-006
+HIGH_DROP_RATE,Taux de coupure d'appels élevé,RADIO,MAJOR,SOP-NET-007
+CALL_SETUP_FAILURE_HIGH,Échecs d'établissement d'appel élevés,RADIO,MAJOR,SOP-NET-008
+HANDOVER_FAILURE_HIGH,Échecs de transfert intercellulaire élevés,RADIO,MINOR,SOP-NET-009
+RF_INTERFERENCE,Interférence en voie montante,RADIO,WARNING,SOP-NET-010
+PRB_UTILIZATION_HIGH,Occupation des ressources radio élevée,RADIO,WARNING,SOP-NET-011
+ANTENNA_TILT_FAULT,Défaut d'inclinaison d'antenne,RADIO,MINOR,SOP-NET-012
+LINK_DOWN,Lien de transport coupé,TRANSPORT,CRITICAL,SOP-NET-013
+PACKET_LOSS_HIGH,Perte de paquets élevée,TRANSPORT,MAJOR,SOP-NET-014
+BACKHAUL_CONGESTION,Congestion du backhaul,TRANSPORT,MAJOR,SOP-NET-014
+CRC_ERRORS_HIGH,Erreurs CRC en hausse,TRANSPORT,MINOR,SOP-NET-015
+LATENCY_HIGH,Latence de transport élevée,TRANSPORT,MINOR,SOP-NET-016
+MW_FADING,Évanouissement du lien hertzien,TRANSPORT,MINOR,SOP-NET-017
+FIBER_CUT,Coupure de fibre suspectée,TRANSPORT,CRITICAL,SOP-NET-018
+ROUTER_CPU_HIGH,Charge processeur du routeur élevée,TRANSPORT,MAJOR,SOP-NET-019
+SYNC_LOSS,Perte de synchronisation d'horloge,TRANSPORT,MAJOR,SOP-NET-020
+BGP_SESSION_DOWN,Session de routage interrompue,TRANSPORT,MAJOR,SOP-NET-021
+SATELLITE_LINK_DEGRADED,Lien satellite dégradé,TRANSPORT,MINOR,SOP-NET-022
+SIGNALING_OVERLOAD,Surcharge de la signalisation,CORE,MAJOR,SOP-COR-001
+CHARGING_FAILURE,Défaillance de la facturation temps réel,CORE,CRITICAL,SOP-COR-002
+SMSC_BACKLOG,File d'attente SMS saturée,CORE,MAJOR,SOP-COR-003
+USSD_GATEWAY_TIMEOUT,Délais dépassés sur la passerelle USSD,CORE,MAJOR,SOP-COR-004
+MOMO_PLATFORM_DEGRADED,Plateforme Mobile Money dégradée,CORE,CRITICAL,SOP-COR-005
+DB_REPLICATION_LAG,Retard de réplication de base de données,CORE,MINOR,SOP-COR-006
+HLR_UNAVAILABLE,Registre des abonnés indisponible,CORE,CRITICAL,SOP-COR-007
+DATA_SESSION_FAILURES_HIGH,Échecs de sessions de données élevés,CORE,MAJOR,SOP-COR-008
+MAINS_FAIL,Coupure du secteur,POWER,MAJOR,SOP-PWR-001
+BATTERY_LOW,Batterie faible,POWER,MAJOR,SOP-PWR-002
+GENSET_FAULT,Défaut du groupe électrogène,POWER,MAJOR,SOP-PWR-003
+GENSET_FUEL_LOW,Carburant du groupe électrogène bas,POWER,MINOR,SOP-PWR-004
+RECTIFIER_FAULT,Défaut de redresseur,POWER,MAJOR,SOP-PWR-005
+VOLTAGE_UNSTABLE,Tension d'alimentation instable,POWER,WARNING,SOP-PWR-006
+BATTERY_END_OF_LIFE,Batterie en fin de vie,POWER,WARNING,SOP-PWR-007
+POWER_SUPPLY_FAULT,Défaut d'alimentation électrique,POWER,MAJOR,SOP-PWR-008
+HIGH_TEMPERATURE,Température élevée,ENVIRONMENT,MAJOR,SOP-ENV-001
+HVAC_FAULT,Défaut de climatisation,ENVIRONMENT,MINOR,SOP-ENV-002
+DOOR_OPEN,Porte de l'abri ouverte,ENVIRONMENT,WARNING,SOP-ENV-003
+SMOKE_DETECTED,Fumée détectée,ENVIRONMENT,CRITICAL,SOP-ENV-004
+FLOOD_DETECTED,Inondation détectée,ENVIRONMENT,CRITICAL,SOP-ENV-005
+THEFT_ALARM,Alarme anti-intrusion,ENVIRONMENT,MAJOR,SOP-ENV-006
+FAN_FAILURE,Défaillance de ventilation,ENVIRONMENT,MINOR,SOP-ENV-007
+ANOMALY_DETECTED,Anomalie détectée par le modèle,PLATFORM,WARNING,SOP-PLT-001
+FAILURE_PREDICTED,Panne d'équipement prédite,PLATFORM,WARNING,SOP-PLT-002
+CAPACITY_SATURATION_RISK,Risque de saturation prévu,PLATFORM,WARNING,SOP-PLT-003
+DATA_FRESHNESS_BREACH,Fraîcheur des données dépassée,PLATFORM,MINOR,SOP-PLT-004
+MODEL_DRIFT_DETECTED,Dérive de modèle détectée,PLATFORM,MINOR,SOP-PLT-005

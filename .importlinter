@@ -17,6 +17,7 @@
 [importlinter]
 root_packages =
     telecom_common
+    telecomx_generators
 include_external_packages = True
 
 ; --- libs never depend upward (ADR-001) --------------------------------------
@@ -32,7 +33,21 @@ forbidden_modules =
     apps
     agents
     ml_platform
-    data_platform
+    telecomx_generators
+
+; --- generators depend on the library only (ADR-001) -------------------------
+; Components never import each other: they meet through libs/. A generator that
+; reached into the agents or the API would couple the data platform to the layers
+; built on top of it.
+[importlinter:contract:generators-depend-on-libs-only]
+name = telecomx_generators imports no other component
+type = forbidden
+source_modules =
+    telecomx_generators
+forbidden_modules =
+    apps
+    agents
+    ml_platform
 
 ; --- the shared library stays light (ADR-001) --------------------------------
 ; Every dependency of telecom_common is imposed on every component that imports it.
@@ -73,12 +88,14 @@ forbidden_modules =
 
 ; --- internal layering of telecom_common -------------------------------------
 ; Mirrors the real dependency direction so that it cannot decay into cycles:
-; observability uses security (log redaction), config and contracts use domain.
-; The `|` marks siblings that must not import each other.
+; observability uses security (log redaction), config and contracts use domain, and
+; reference joins contracts with the domain entities. The `|` marks siblings that must
+; not import each other.
 [importlinter:contract:telecom-common-layers]
 name = telecom_common internal layering
 type = layers
 layers =
+    telecom_common.reference
     telecom_common.contracts | telecom_common.config | telecom_common.observability
     telecom_common.security
     telecom_common.domain | telecom_common.timeutils

@@ -11,6 +11,7 @@ resolution-markers = [
 [manifest]
 members = [
     "telecom-common",
+    "telecomx-generators",
     "telecomx-platform",
 ]
 
@@ -1259,6 +1260,17 @@ requires-dist = [
 provides-extras = ["otel-sdk"]
 
 [[package]]
+name = "telecomx-generators"
+version = "0.1.0"
+source = { editable = "data-platform/generators" }
+dependencies = [
+    { name = "telecom-common" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "telecom-common", editable = "libs/telecom-common" }]
+
+[[package]]
 name = "telecomx-platform"
 version = "0.1.0"
 source = { virtual = "." }
@@ -1275,6 +1287,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "telecom-common" },
+    { name = "telecomx-generators" },
 ]
 
 [package.metadata]
@@ -1291,6 +1304,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=5.0" },
     { name = "ruff", specifier = ">=0.8" },
     { name = "telecom-common", editable = "libs/telecom-common" },
+    { name = "telecomx-generators", editable = "data-platform/generators" },
 ]
 
 [[package]]

@@ -1,0 +1,4 @@
+tenant_id,name,country_code,currency
+telecomx-ml,TelecomX Mali,ML,XOF
+telecomx-sn,TelecomX Sénégal,SN,XOF
+telecomx-dev,TelecomX Sandbox,ML,XOF

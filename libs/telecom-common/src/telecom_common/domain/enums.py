@@ -15,13 +15,45 @@ from __future__ import annotations
 from enum import StrEnum
 
 __all__ = [
+    "AreaType",
+    "BackhaulType",
     "DataZone",
     "PiiClass",
     "Region",
     "RiskClass",
+    "SiteType",
     "Technology",
     "TenantId",
 ]
+
+
+class AreaType(StrEnum):
+    """Dominant character of a region (reference data, ``ref.regions``)."""
+
+    URBAN = "urban"
+    PERIURBAN = "periurban"
+    RURAL = "rural"
+
+
+class SiteType(StrEnum):
+    """Kind of physical site. Drives capacity, power and equipment layout."""
+
+    MACRO = "macro"
+    MICRO = "micro"
+    INDOOR = "indoor"
+    ROOFTOP = "rooftop"
+
+
+class BackhaulType(StrEnum):
+    """Transport link between a site and the core network.
+
+    Its capacity is what makes a *backhaul congestion* diagnosis possible: a link
+    smaller than the sum of its cells' peaks can saturate under load.
+    """
+
+    FIBER = "fiber"
+    MICROWAVE = "microwave"
+    SATELLITE = "satellite"
 
 
 class Technology(StrEnum):

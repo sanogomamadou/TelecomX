@@ -1,0 +1,10 @@
+tenant_id,region_code,region_name,population,area_type,subscriber_count
+telecomx-ml,BKO,Bamako,2860000,urban,3472000
+telecomx-ml,SKS,Sikasso,3520000,periurban,1736000
+telecomx-ml,KLK,Koulikoro,3520000,periurban,1612000
+telecomx-ml,SGU,Ségou,3300000,periurban,1488000
+telecomx-ml,KYS,Kayes,2200000,rural,1116000
+telecomx-ml,MPT,Mopti,3080000,rural,1240000
+telecomx-ml,TBT,Tombouctou,1320000,rural,620000
+telecomx-ml,GAO,Gao,1540000,rural,744000
+telecomx-ml,KDL,Kidal,660000,rural,372000

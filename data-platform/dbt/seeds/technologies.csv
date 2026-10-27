@@ -1,0 +1,5 @@
+technology,label,downlink_mbps,reference_latency_ms
+G2,2G (GSM/EDGE),0.236,300.0
+G3,3G (UMTS/HSPA),42.0,100.0
+G4,4G (LTE),300.0,40.0
+G5,5G (NR),1000.0,15.0
