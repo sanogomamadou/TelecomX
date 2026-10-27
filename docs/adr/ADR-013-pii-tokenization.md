@@ -119,7 +119,10 @@ def tokenize(value: str, key: bytes, *, version: str = "v1") -> str:
 
 > ⚠️ **Choix assumé** : la zone bronze conserve la charge utile brute (FR-M2-002), donc
 > **potentiellement des identifiants directs**. C'est délibéré — bronze doit permettre le rejeu
-> et le débogage d'ingestion. En contrepartie, bronze est soumis à un régime renforcé :
+> et le débogage d'ingestion. **Il en va de même des topics Kafka**, qui portent ces identifiants
+> en clé et en charge utile ([ADR-002, correction du 2026-10-27](ADR-002-event-backbone.md)) :
+> Kafka et bronze forment une seule zone de confiance. En contrepartie, bronze est soumis à un
+> régime renforcé :
 > accès réservé à `platform_admin`, rétention courte (90 j en production, 7 j en dev),
 > jamais exposé à Trino en libre-service, jamais accessible aux agents.
 > *(Dans un contexte réglementaire strict, la tokenisation serait avancée au producteur lui-même ;

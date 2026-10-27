@@ -98,14 +98,14 @@ compromis soit acceptable.
 |---|---|---|---|---|
 | `network.metrics` | 12 | 7 j | `cell_id` | Ordre garanti par cellule (indispensable à la détection d'anomalie) |
 | `network.alarms` | 6 | 30 j | `site_id` | Faible débit, forte valeur, rétention longue |
-| `cdr.events` | 24 | 3 j | `subscriber_token` | Flux le plus volumineux (99 M/j) |
-| `data.sessions` | 18 | 3 j | `subscriber_token` | |
-| `sms.events` | 12 | 3 j | `subscriber_token` | Pics extrêmes (Nouvel An ×28) |
-| `ussd.events` | 6 | 3 j | `subscriber_token` | |
-| `recharge.events` | 6 | 30 j | `subscriber_token` | Donnée financière |
-| `bundle.events` | 6 | 30 j | `subscriber_token` | |
-| `mobilemoney.transactions` | 12 | 90 j | `account_token` | Donnée financière, exigence d'audit |
-| `customer.events` | 6 | 90 j | `subscriber_token` | |
+| `cdr.events` | 24 | 3 j | `caller_id` ⚠️ | Flux le plus volumineux (99 M/j) |
+| `data.sessions` | 18 | 3 j | `subscriber_id` ⚠️ | |
+| `sms.events` | 12 | 3 j | `sender_id` ⚠️ | Pics extrêmes (Nouvel An ×28) |
+| `ussd.events` | 6 | 3 j | `subscriber_id` ⚠️ | |
+| `recharge.events` | 6 | 30 j | `subscriber_id` ⚠️ | Donnée financière |
+| `bundle.events` | 6 | 30 j | `subscriber_id` ⚠️ | |
+| `mobilemoney.transactions` | 12 | 90 j | `sender_account` ⚠️ | Donnée financière, exigence d'audit |
+| `customer.events` | 6 | 90 j | `subscriber_id` ⚠️ | |
 | `<topic>.dlq` | 3 | 30 j | — | Une DLQ par topic (FR-M1-008) |
 
 > ⚙️ En développement, `SPEED_FACTOR` réduit le débit ; le nombre de partitions reste identique
@@ -113,6 +113,43 @@ compromis soit acceptable.
 
 **Garanties producteur** : `acks=all`, `enable.idempotence=true`, `max.in.flight=5`, `retries=MAX`.
 **Consommateurs** : `isolation.level=read_committed`, `auto.offset.reset=earliest`, offsets gérés par les checkpoints Spark.
+
+---
+
+## Correction — 2026-10-27
+
+**⚠️ = identifiant brut.** La version initiale de la table ci-dessus indiquait des clés de la
+forme `subscriber_token` et `account_token`. C'était **impossible** : un jeton est produit par la
+tokenisation, qui a lieu dans le job Spark bronze → silver ([ADR-013](ADR-013-pii-tokenization.md)),
+donc *après* Kafka. Le producteur ne détient que l'identifiant brut. La vérité exécutable est le
+contrat Avro (`telecomx.partition_key`), et elle partitionne sur l'identifiant brut.
+
+L'erreur a été trouvée en écrivant le générateur de code du lot 1.2, qui lit ces contrats.
+
+### Conséquence, plus large que la table
+
+**Les topics Kafka portent des identifiants directs**, en clé de message **et** en charge utile,
+avec les rétentions ci-dessus (jusqu'à 90 j pour `mobilemoney.transactions` et `customer.events`).
+Le modèle de menaces ne traitait ce risque que pour la zone bronze.
+
+Kafka est dans la **même zone de confiance que bronze** : même donnée brute, même rétention, même
+raison d'être (rejeu). Il hérite donc du même régime, désormais écrit :
+
+| Contrôle | Application aux topics |
+|---|---|
+| Accès | ACL par topic, réservées aux producteurs et au job d'ingestion ; aucun consommateur applicatif (API, agents, ML) |
+| Authentification | SASL/mTLS en production |
+| Rétention | Ne jamais dépasser celle de bronze (90 j en production) |
+| Exposition | Aucun accès libre-service ; les consommateurs métier lisent silver, jamais Kafka |
+| Chiffrement | TLS en transit, chiffrement du volume au repos |
+| DLQ | Elles conservent la charge utile **rejetée** (`raw_payload`), donc les mêmes identifiants : même régime, rétention de 30 j |
+
+> 💡 **Alternative écartée** : faire partitionner par un pseudonyme calculé côté producteur
+> supposerait que celui-ci détienne la clé HMAC, ce qui contredit [ADR-013](ADR-013-pii-tokenization.md)
+> (la clé n'est détenue que par le job d'ingestion). Le coût d'un identifiant brut en clé est donc
+> accepté, et circonscrit par le régime ci-dessus.
+
+Documents alignés : [threat model](../security/threat-model.md) (R8), [politique PII](../security/pii-policy.md) §6.
 
 ## Références
 - [PRD §2.2](../product/PRD.md) · [FR-M1-007/008](../product/SRS.md) · [ADR-011](ADR-011-local-dev-strategy.md) · [ADR-015](ADR-015-data-contracts.md)

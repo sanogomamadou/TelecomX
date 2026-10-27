@@ -147,7 +147,7 @@ Chaque étape est **tracée** (une seule trace OpenTelemetry de bout en bout) et
 | Phase | Contenu | Statut |
 |---|---|---|
 | **0** | Product & Architecture — PRD, SRS, 17 ADR, threat model, contrats, SLO | ✅ **Terminée** |
-| **1** | Data Platform — générateurs, Kafka, Spark, Iceberg, Trino, dbt | ⏳ À venir |
+| **1** | Data Platform — générateurs, Kafka, Spark, Iceberg, Trino, dbt | 🔄 **En cours** — lots 1.1 (bibliothèque socle) et 1.2 (génération de code depuis les contrats) terminés |
 | **2** | Data Quality & Governance — Schema Registry, DQ gates, lineage, PII | ⏳ |
 | **3** | ML Platform — 5 modèles, MLflow, serving, drift | ⏳ |
 | **4** | Agent Platform — 8 agents, tools, RAG, mémoire, HITL, évaluation | ⏳ |

@@ -145,7 +145,7 @@ données quittent l'infrastructure.
 
 | Compromis | Raison | Compensation |
 |---|---|---|
-| **Bronze conserve la charge utile brute**, donc potentiellement des identifiants directs | La zone brute doit refléter *exactement* ce qui a été reçu, sinon le rejeu et le débogage d'ingestion deviennent impossibles. Tokeniser au producteur supposerait de maîtriser des systèmes sources tiers. | Accès `platform_admin` uniquement · rétention 90 j · jamais exposé à Trino en libre-service · jamais accessible aux agents · chiffrement au repos |
+| **Bronze et les topics Kafka conservent la charge utile brute**, donc potentiellement des identifiants directs, y compris en clé de message | La zone brute doit refléter *exactement* ce qui a été reçu, sinon le rejeu et le débogage d'ingestion deviennent impossibles. Tokeniser au producteur supposerait de maîtriser des systèmes sources tiers. | Accès `platform_admin` uniquement · rétention 90 j · jamais exposé à Trino en libre-service · jamais accessible aux agents · chiffrement au repos |
 | Tokenisation déterministe (vulnérable à la corrélation si la clé fuite) | Le déterminisme est indispensable aux jointures analytiques ; sans lui, aucun customer 360, aucun churn, aucune fraude | La clé n'est détenue que par le job d'ingestion, jamais par les composants de lecture |
 | Les prompts transitent chez un fournisseur LLM tiers | Contrainte du projet (pas de LLM auto-hébergé viable sur 16 GB) | Aucune PII ne peut atteindre le prompt par construction ; option de rédaction ; transfert documenté |
 

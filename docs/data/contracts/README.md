@@ -164,14 +164,94 @@ Résultat attendu :
 
 ---
 
-## 7. Vérifications automatisées
+## 7. Génération de code
+
+Le `.avsc` est écrit à la main ; **tout le reste en est dérivé** ([ADR-015](../../adr/ADR-015-data-contracts.md)).
+
+```
+data-platform/schemas/avro/<flux>-v<N>.avsc          ← la seule chose qu'on édite
+        │
+        │  python data-platform/schemas/generate.py     (make codegen)
+        ▼
+libs/telecom-common/src/telecom_common/contracts/generated/
+├── <flux>_v<N>.py     un modèle Pydantic par contrat (11 aujourd'hui)
+├── __init__.py        registre : MODELS[contrat] et BY_TOPIC[topic]
+└── manifest.json      description neutre, lue par Spark et dbt
+```
+
+### Ce qui est généré, et ce qui ne l'est pas
+
+| | Généré (déclaratif) | Écrit à la main (logique) |
+|---|---|---|
+| Types, bornes `gte/lte/gt/lt`, motifs `pattern` | ✅ | |
+| Énumérations d'événements | ✅ | |
+| Valeurs par défaut, unité et classe PII (dans le schéma JSON) | ✅ | |
+| Déclaration d'une règle de somme (`eq_sum`) | ✅ | |
+| **Exécution** de la règle de somme, `not_future`, refus des horodatages ambigus | | `contracts/base.py` |
+| Lecture de la grammaire des contraintes | | `contracts/constraints.py` |
+| Vérification structurelle d'un contrat | | `contracts/spec.py` |
+
+> **Pourquoi cette frontière.** Un fichier qu'il est interdit d'éditer ne doit pas contenir de
+> comportement qu'un relecteur doit comprendre. La logique vit dans du code relu et testé ; le code
+> généré ne fait que déclarer des données.
+
+### Les règles qu'un modèle ne peut pas vérifier
+
+Un modèle voit **un seul enregistrement**. Trois règles exigent un état extérieur :
+
+| Règle | Exige | Vérifiée par |
+|---|---|---|
+| `unique` | l'historique des événements déjà reçus | Spark (déduplication), tests dbt |
+| `in_ref:<table>` | une table de référence (cellules, sites, régions…) | Spark (enrichissement), tests dbt |
+| `lte_ref:<table>.<col>` | une valeur d'une autre table (`active_users` ≤ capacité de la cellule) | Spark, tests dbt |
+
+Elles ne sont pas perdues : elles voyagent dans `manifest.json`, avec l'unité, la classe PII et le
+type de jeton de chaque champ. C'est ce fichier que le job silver lira pour savoir **quoi
+tokeniser**, et que le générateur de tests dbt lira pour savoir **quoi contrôler**.
+
+### Ajouter ou modifier un champ
+
+```
+1. Éditer le .avsc          (ajout avec valeur par défaut : voir §4)
+2. make codegen              régénère les modèles et le manifeste
+3. git add -A                le .avsc ET les fichiers générés partent dans le même commit
+```
+
+Oublier l'étape 2 est impossible à merger : la CI régénère en mémoire et compare octet par octet.
+
+### Grammaire des contraintes (`telecomx.constraint`)
+
+Liste séparée par des virgules. Une virgule **à l'intérieur** d'une accolade, d'une parenthèse ou d'une
+classe de caractères n'est pas un séparateur : `pattern:^SITE-[0-9]{3,4}$` est une seule contrainte.
+
+| Contrainte | Sens | Modèle | Manifeste |
+|---|---|---|---|
+| `not_null` | valeur obligatoire | ✅ | ✅ |
+| `gte:N` `gt:N` `lte:N` `lt:N` | bornes numériques | ✅ | ✅ |
+| `pattern:REGEX` | forme d'une chaîne | ✅ | ✅ |
+| `eq_sum:a+b` | égal à la somme d'autres champs (tolérance 0,01) | ✅ | ✅ |
+| `not_future` | pas plus de 5 min dans le futur | ✅ | ✅ |
+| `unique` | pas de doublon | — | ✅ |
+| `in_ref:table` | existe dans une table de référence | — | ✅ |
+| `lte_ref:table.col` | borné par une valeur d'une autre table | — | ✅ |
+
+Un nom inconnu, un argument manquant ou une borne incohérente (`gte:10,lte:5`) **fait échouer la
+génération** avec le nom du contrat et du champ.
+
+---
+
+## 8. Vérifications automatisées
 
 | Vérification | Étape |
 |---|---|
 | Les `.avsc` sont syntaxiquement valides | pre-commit + CI |
-| Tout champ possède un `doc` non vide | CI |
+| Tout champ métier possède un `doc` non vide | CI |
 | Toute mesure possède une `telecomx.unit` | CI |
-| Tout champ PII déclare `telecomx.tokenize_as` | CI |
+| Tout champ PII déclare `telecomx.tokenize_as` ou `telecomx.transform` | CI |
+| Le jeton produit appartient à un ensemble fermé de types | CI |
 | Les champs d'enveloppe sont présents | CI |
-| L'évolution est compatible avec la version enregistrée | CI |
-| Le code généré est à jour vis-à-vis des `.avsc` | CI |
+| Une contrainte n'est appliquée qu'à un type qui la supporte | CI |
+| **Le code généré est à jour vis-à-vis des `.avsc`** | pre-commit + CI + test |
+| Les 11 modèles acceptent un événement conforme et refusent chaque violation | CI |
+| Chaque modèle sérialise et relit un événement via son schéma Avro | CI |
+| L'évolution est compatible avec la version enregistrée | CI *(Phase 2)* |

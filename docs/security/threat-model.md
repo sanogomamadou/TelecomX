@@ -102,6 +102,7 @@ avant l'ère des LLM, ne couvre pas.
 | **S** | Producteur non autorisé injectant de faux événements | M × 🟠 | Authentification Kafka (SASL/mTLS en production), ACL par topic |
 | **T** | Empoisonnement de données pour fausser un modèle | F × 🟠 | Validation de contrat, règles métier, détection d'anomalie de volume, immuabilité de bronze permettant l'analyse rétrospective |
 | **I** | Accès direct à MinIO contournant Trino | M × 🔴 | Identifiants de service par composant limités aux préfixes nécessaires ; jamais d'identifiants racine ; bronze non exposé |
+| **I** | **Lecture directe d'un topic Kafka** : clés et charges utiles portent des identifiants bruts, DLQ comprises | M × 🔴 | ACL par topic réservées aux producteurs et au job d'ingestion ; SASL/mTLS ; rétention plafonnée à celle de bronze ; aucun consommateur applicatif ([ADR-002](../adr/ADR-002-event-backbone.md), correction du 2026-10-27) |
 | **D** | Saturation des topics | F × 🟠 | Quotas Kafka, supervision du lag, DLQ bornée |
 
 ### 4.5 Frontière : Données au repos
@@ -182,7 +183,7 @@ une instruction** si le prompt ne distingue pas les données des consignes.
 | **R5** | Fuite de PII vers le fournisseur LLM | M × 🔴 | ✅ Traité | Tokenisation amont + scan de sortie + rédaction |
 | **R6** | Accès interne abusif aux données de localisation | É × 🟠 | 🔸 Partiel | RBAC + audit ; **détection comportementale non implémentée en v1** |
 | **R7** | Compromission de dépendance | M × 🟠 | ✅ Traité | Scans CI, versions épinglées, images minimales |
-| **R8** | Bronze contient des identifiants directs | É × 🟠 | 🔸 **Accepté** | Accès `platform_admin` seul, rétention courte, non exposé — *compromis assumé* ([ADR-013](../adr/ADR-013-pii-tokenization.md)) |
+| **R8** | Bronze **et les topics Kafka** contiennent des identifiants directs | É × 🟠 | 🔸 **Accepté** | Accès `platform_admin` seul, ACL par topic, rétention courte, non exposé — *compromis assumé* ([ADR-013](../adr/ADR-013-pii-tokenization.md), [ADR-002](../adr/ADR-002-event-backbone.md)) |
 
 ---
 
@@ -190,7 +191,7 @@ une instruction** si le prompt ne distingue pas les données des consignes.
 
 | Risque | Justification | Condition de réexamen |
 |---|---|---|
-| Identifiants directs en bronze | Nécessaires au rejeu et au débogage d'ingestion ; alternative (tokenisation au producteur) impossible sur des systèmes sources non maîtrisés | Contexte réglementaire strict |
+| Identifiants directs en bronze **et dans les topics Kafka** (clés et charges utiles) | Nécessaires au rejeu et au débogage d'ingestion ; le producteur ne détient pas la clé de tokenisation, qui est réservée au job d'ingestion ; alternative (tokenisation au producteur) impossible sur des systèmes sources non maîtrisés | Contexte réglementaire strict |
 | Isolation multi-tenant logique | Contrainte de ressources ; conception réversible | Exigence réglementaire de séparation |
 | Absence de détection comportementale interne (R6) | Hors périmètre v1 ; nécessiterait un UEBA | Passage en production réelle |
 | TLS désactivé en développement local | Boucle de développement ; obligatoire en production | — |
