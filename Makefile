@@ -144,6 +144,10 @@ refdata: ## Regenerate the synthetic reference data (dbt seeds)
 refdata-check: ## Fail if the committed reference data is stale
 	@uv run python -m telecomx_generators.reference --check
 
+.PHONY: gen-events
+gen-events: ## Generate synthetic events to build/events (MINUTES=60 by default)
+	@uv run python -m telecomx_generators.events --duration-minutes $(or $(MINUTES),60) --out-dir build/events
+
 # No `|| echo` fallbacks below: a check that cannot fail does not check anything.
 .PHONY: validate
 validate: ## Validate contracts, generated code freshness and architecture rules

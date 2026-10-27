@@ -91,6 +91,7 @@ $Targets = [ordered]@{
     'codegen-check'    = 'Fail if generated contract code is stale'
     'refdata'          = 'Regenerate the synthetic reference data (dbt seeds)'
     'refdata-check'    = 'Fail if the committed reference data is stale'
+    'gen-events'       = 'Generate synthetic events to build/events (60 minutes)'
     'validate'         = 'Validate contracts, generated code freshness and architecture rules'
     'security'         = 'Run security scans (secrets, dependencies)'
     'ci'               = 'Run the full local CI pipeline'
@@ -233,6 +234,12 @@ switch ($Target) {
     'refdata-check' {
         Write-Step 'Checking reference data is up to date'
         Invoke-Py @('python', '-m', 'telecomx_generators.reference', '--check')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+
+    'gen-events' {
+        Write-Step 'Generating synthetic events into build/events'
+        Invoke-Py @('python', '-m', 'telecomx_generators.events', '--duration-minutes', '60', '--out-dir', 'build/events')
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
 

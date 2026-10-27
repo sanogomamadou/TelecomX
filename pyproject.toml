@@ -95,7 +95,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "ARG", "PLR2004"]        # assert / fixtures / magic values
+"tests/**" = ["S101", "S311", "ARG", "PLR2004"]  # assert / fixtures / magic values / seeded synthetic randomness
 "scripts/**" = ["T20"]                          # scripts legitimately print
 "**/conftest.py" = ["ARG"]
 
@@ -120,6 +120,14 @@ namespace_packages = true
 [[tool.mypy.overrides]]
 module = "telecom_common.*"
 strict = true
+
+[[tool.mypy.overrides]]
+# The event streams pass plain strings ("COMPLETED", "UssdStatus"...) to the generated
+# models, whose fields are enums. Pydantic validates and coerces them at construction, and
+# a wrong value fails there (and in the contract tests), so mypy's arg-type check on these
+# call sites would only demand an enum import per field without catching anything more.
+module = "telecomx_generators.events.streams.*"
+disable_error_code = ["arg-type"]
 
 [[tool.mypy.overrides]]
 # Third-party packages without bundled type stubs.
