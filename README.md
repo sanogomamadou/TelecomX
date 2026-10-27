@@ -5,7 +5,8 @@
 
 **Observe → Understand → Predict → Decide → Act → Verify**
 
-[![Phase](https://img.shields.io/badge/phase-0%20%C2%B7%20Product%20%26%20Architecture-blue)](docs/product/PRD.md)
+[![CI](https://github.com/sanogomamadou/TelecomX/actions/workflows/ci.yml/badge.svg)](https://github.com/sanogomamadou/TelecomX/actions/workflows/ci.yml)
+[![Phase](https://img.shields.io/badge/phase-1%20%C2%B7%20Data%20Platform-blue)](docs/product/PRD.md)
 [![Contrats](https://img.shields.io/badge/contrats-11%2F11%20valides-success)](docs/data/contracts/README.md)
 [![ADR](https://img.shields.io/badge/ADR-18-informational)](docs/adr/README.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)](LICENSE)
