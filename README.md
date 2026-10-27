@@ -175,11 +175,14 @@ Chaque étape est **tracée** (une seule trace OpenTelemetry de bout en bout) et
 ### Données
 - [Contrats](docs/data/contracts/README.md) — gouvernance, évolution de schéma, DLQ
 - [Dictionnaire](docs/data/data-dictionary.md) — modèle bronze/silver/gold, référentiels
+- [Référentiels synthétiques](data-platform/dbt/seeds/README.md) — réseau fictif déterministe (1 610 sites, 4 821 cellules)
 
 ### Sécurité
 - [Threat model](docs/security/threat-model.md) — STRIDE + menaces spécifiques aux agents IA
 - [Politique PII](docs/security/pii-policy.md) — classification, tokenisation, rétention
 
+### Contribuer
+- [CONTRIBUTING](CONTRIBUTING.md) — conventions, règles d'architecture vérifiées, fichiers générés, pièges connus
 
 ---
 
