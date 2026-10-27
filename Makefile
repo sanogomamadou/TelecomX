@@ -115,7 +115,7 @@ format: ## Auto-fix formatting and lint issues
 
 .PHONY: typecheck
 typecheck: ## Run mypy (strict on libs/)
-	@uv run mypy libs apps agents ml-platform 2>/dev/null || echo "==> No Python packages to check yet"
+	@uv run mypy libs
 
 .PHONY: test
 test: ## Run unit tests with coverage
@@ -126,12 +126,24 @@ test: ## Run unit tests with coverage
 test-integration: ## Run integration tests (requires running services)
 	@uv run pytest -m integration
 
+.PHONY: codegen
+codegen: ## Regenerate event models and manifest from the Avro contracts
+	@echo "==> Generating event models and manifest from the Avro contracts"
+	@uv run python data-platform/schemas/generate.py
+
+.PHONY: codegen-check
+codegen-check: ## Fail if generated contract code is stale
+	@uv run python data-platform/schemas/generate.py --check
+
+# No `|| echo` fallbacks below: a check that cannot fail does not check anything.
 .PHONY: validate
-validate: ## Validate data contracts and architecture rules
+validate: ## Validate contracts, generated code freshness and architecture rules
 	@echo "==> Validating Avro data contracts"
 	@$(PYTHON) scripts/validate_contracts.py
+	@echo "==> Checking generated contract code is up to date"
+	@uv run python data-platform/schemas/generate.py --check
 	@echo "==> Checking architecture import rules"
-	@uv run lint-imports 2>/dev/null || echo "    (import-linter contracts apply from Phase 1)"
+	@uv run lint-imports
 
 .PHONY: security
 security: ## Run security scans (secrets, dependencies, images)

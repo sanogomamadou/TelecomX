@@ -63,6 +63,16 @@ jobs:
         run: python -m pip install --quiet fastavro
       - name: Validate Avro contracts
         run: python scripts/validate_contracts.py
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --dev
+      # Regenerates in memory and compares byte for byte with what is committed.
+      # A contract edited without `make codegen`, or a generated file edited by
+      # hand, fails here and cannot be merged.
+      - name: Generated contract code is up to date
+        run: uv run python data-platform/schemas/generate.py --check
 
   # ---------------------------------------------------------------------------
   # Secret scanning runs unconditionally — a leaked secret is never "unrelated".
@@ -108,8 +118,10 @@ jobs:
           enable-cache: true
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --dev
+      # Only packages that exist: mypy exits with an error on a directory that holds
+      # no .py file. Add apps, agents and ml-platform here as they gain code.
       - name: Mypy
-        run: uv run mypy libs apps agents ml-platform
+        run: uv run mypy libs
 
   architecture:
     name: Architecture rules

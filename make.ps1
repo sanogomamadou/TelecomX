@@ -30,24 +30,30 @@ function Write-Ok   { param([string]$Message) Write-Host "OK  $Message" -Foregro
 function Write-Warn { param([string]$Message) Write-Host "!   $Message" -ForegroundColor Yellow }
 
 function Invoke-Py {
-    # Prefer `uv run` when available, fall back to the system interpreter.
+    # Run a command inside the project environment. Tools (ruff, mypy, pytest) and the
+    # workspace packages live in the uv-managed venv, not in the system Python, so
+    # everything goes through `uv run`. When `uv` is not on PATH it is reachable as a
+    # module of the system interpreter (`pip install uv` does not always add it).
     param([Parameter(Mandatory)][string[]]$Arguments)
     if (Get-Command uv -ErrorAction SilentlyContinue) {
         & uv run @Arguments
     }
     else {
-        & python -m @Arguments
+        & python -m uv run @Arguments
     }
 }
 
 function Test-PyModule {
     # Native executables do not raise catchable exceptions, so optional tooling
     # must be probed explicitly rather than wrapped in try/catch.
-    # $LASTEXITCODE is restored so that a negative probe does not leak into the
-    # script's own exit status.
+    # The probe runs in the PROJECT environment: probing the system Python reported
+    # ruff, mypy and pytest as missing even after `uv sync`, which made `ci` skip
+    # steps silently. $LASTEXITCODE is restored so that a negative probe does not
+    # leak into the script's own exit status.
     param([Parameter(Mandatory)][string]$Module)
     $previous = $LASTEXITCODE
-    & python -c "import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('$Module') else 1)" 2>$null
+    $probe = "import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('$Module') else 1)"
+    Invoke-Py @('python', '-c', $probe) *> $null
     $found = $LASTEXITCODE -eq 0
     $global:LASTEXITCODE = $previous
     return $found
@@ -81,7 +87,9 @@ $Targets = [ordered]@{
     'typecheck'        = 'Run mypy (strict on libs/)'
     'test'             = 'Run unit tests with coverage'
     'test-integration' = 'Run integration tests (requires running services)'
-    'validate'         = 'Validate data contracts and architecture rules'
+    'codegen'          = 'Regenerate event models and manifest from the Avro contracts'
+    'codegen-check'    = 'Fail if generated contract code is stale'
+    'validate'         = 'Validate contracts, generated code freshness and architecture rules'
     'security'         = 'Run security scans (secrets, dependencies)'
     'ci'               = 'Run the full local CI pipeline'
     'adr'              = 'Create a new ADR (usage: .\make.ps1 adr 018 my-decision)'
@@ -200,18 +208,29 @@ switch ($Target) {
         Invoke-Py @('pytest', '-m', 'integration')
     }
 
+    'codegen' {
+        Write-Step 'Generating event models and manifest from the Avro contracts'
+        Invoke-Py @('python', 'data-platform/schemas/generate.py')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Write-Ok 'Generated code is up to date - commit it together with the .avsc'
+    }
+
+    'codegen-check' {
+        Write-Step 'Checking generated contract code is up to date'
+        Invoke-Py @('python', 'data-platform/schemas/generate.py', '--check')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+
     'validate' {
         Write-Step 'Validating Avro data contracts'
         & python scripts/validate_contracts.py
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Write-Step 'Checking generated contract code is up to date'
+        Invoke-Py @('python', 'data-platform/schemas/generate.py', '--check')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         Write-Step 'Checking architecture import rules'
-        if (Test-PyModule 'importlinter') {
-            Invoke-Py @('importlinter.cli')
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        }
-        else {
-            Write-Warn 'import-linter not installed - architecture contracts apply from Phase 1'
-        }
+        Invoke-Py @('lint-imports')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         Write-Ok 'Validation passed'
     }
 

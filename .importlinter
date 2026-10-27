@@ -1,57 +1,84 @@
-; Architecture rules enforced in CI (ADR-001, ADR-009, ADR-016).
-; Run with: lint-imports
+; Architecture rules enforced in CI (ADR-001, ADR-009, ADR-014).
+; Run with:  uv run lint-imports        (or:  .\make.ps1 validate)
 ;
-; These contracts turn architectural intent into a build failure. A rule that is
-; only written in a document is a suggestion; a rule checked here is a constraint.
+; A rule written in a document is a suggestion; a rule checked here is a constraint.
+;
+; Scope: ONLY what exists today. A contract naming a package that does not exist yet
+; could not run, which is exactly how the Phase 0 version of this file silently never
+; executed. Contracts are added with the component they protect:
+;
+;   when apps/, agents/, ml-platform/, data-platform/ gain Python packages
+;       -> add the cross-module layering contract (apps > agents > ml > data > libs)
+;   when libs/telecom-common/llm/providers/ exists (Phase 4)
+;       -> add it to `ignore_imports` of the llm-isolation contract below
+;   when agents/tools and apps/api/routers exist (Phase 4-5)
+;       -> add the "no raw query client in business code" contract (ADR-016)
 
 [importlinter]
 root_packages =
     telecom_common
 include_external_packages = True
 
-; --- Layered architecture (ADR-001) -----------------------------------------
-; A layer may only import layers below it. Never sideways between application
-; modules, never upwards.
-[importlinter:contract:layers]
-name = Layered architecture
-type = layers
-layers =
-    apps
-    agents
-    ml_platform
-    data_platform
-    telecom_common
-ignore_imports =
-    tests.** -> **
-
-; --- LLM SDK isolation (ADR-009) --------------------------------------------
-; Only the gateway's provider adapters may import a vendor SDK. This is what
-; makes "switching provider is a config change" true rather than aspirational.
-[importlinter:contract:llm-isolation]
-name = LLM SDKs are confined to the gateway providers
+; --- libs never depend upward (ADR-001) --------------------------------------
+; The shared library is imported by every component; it imports none of them.
+; Packages that do not exist yet are listed anyway: the rule then holds from the
+; day they appear instead of being forgotten.
+[importlinter:contract:libs-never-import-upward]
+name = telecom_common never imports an application module
 type = forbidden
 source_modules =
-    agents
+    telecom_common
+forbidden_modules =
     apps
+    agents
     ml_platform
     data_platform
+
+; --- the shared library stays light (ADR-001) --------------------------------
+; Every dependency of telecom_common is imposed on every component that imports it.
+; Heavy clients belong to the component that needs them.
+[importlinter:contract:libs-stay-light]
+name = telecom_common carries no heavy data or ML client
+type = forbidden
+source_modules =
+    telecom_common
+forbidden_modules =
+    pyspark
+    confluent_kafka
+    trino
+    sqlalchemy
+    pyiceberg
+    mlflow
+    langgraph
+    langchain
+
+; --- LLM SDK isolation (ADR-009) ---------------------------------------------
+; Only the gateway's provider adapters may import a vendor SDK. This is what makes
+; "switching provider is a config change" true rather than aspirational.
+[importlinter:contract:llm-isolation]
+name = No LLM vendor SDK is imported outside the gateway providers
+type = forbidden
+source_modules =
+    telecom_common
+; `google` rather than `google.generativeai`: import-linter rejects sub-packages of
+; external packages. The Gemini SDKs live under `google.*`; the rule is slightly broader
+; than its intent, which costs nothing since telecom_common has no reason to import
+; any `google.*` package directly.
 forbidden_modules =
     groq
     openai
     anthropic
-    google.generativeai
+    google
     ollama
 
-; --- Direct data access isolation (ADR-016) ---------------------------------
-; Business code must go through TenantScopedRepository so that the tenant filter
-; cannot be forgotten. Raw clients are reserved for the data access layer.
-[importlinter:contract:no-raw-data-clients]
-name = No raw query clients outside the data access layer
-type = forbidden
-source_modules =
-    agents.tools
-    apps.api.routers
-forbidden_modules =
-    trino
-    sqlalchemy.engine
-    pyiceberg
+; --- internal layering of telecom_common -------------------------------------
+; Mirrors the real dependency direction so that it cannot decay into cycles:
+; observability uses security (log redaction), config and contracts use domain.
+; The `|` marks siblings that must not import each other.
+[importlinter:contract:telecom-common-layers]
+name = telecom_common internal layering
+type = layers
+layers =
+    telecom_common.contracts | telecom_common.config | telecom_common.observability
+    telecom_common.security
+    telecom_common.domain | telecom_common.timeutils
