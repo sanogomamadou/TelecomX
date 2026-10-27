@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from opentelemetry import trace
@@ -304,5 +305,6 @@ class TestSingletons:
     def test_get_metrics_returns_the_same_instance(self) -> None:
         assert get_metrics() is get_metrics()
 
-    def test_get_config_is_cached(self) -> None:
+    def test_get_config_is_cached(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.chdir(tmp_path)  # never read the developer's real .env
         assert get_config() is get_config()

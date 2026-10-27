@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -61,10 +63,14 @@ class TestEnvironmentParsing:
         with pytest.raises(ValidationError):
             PlatformConfig()
 
-    def test_rejects_unknown_constructor_argument(self) -> None:
-        """extra="forbid" catches mistakes made in code."""
-        with pytest.raises(ValidationError):
-            PlatformConfig(kafka_bootsrap_servers="localhost:9092")  # type: ignore[call-arg]
+    def test_unknown_constructor_argument_is_flagged_by_mypy_not_at_runtime(self) -> None:
+        """mypy reports the unknown argument (hence the `type: ignore`); at runtime it is ignored.
+
+        `mypy tests/unit/telecom_common/test_config.py` fails with an unused-ignore error if
+        mypy ever stops reporting it. CI type-checks libs/ and the generators only.
+        """
+        config = PlatformConfig(kafka_bootsrap_servers="localhost:9092")  # type: ignore[call-arg]
+        assert config.env is Environment.DEVELOPMENT
 
     def test_ignores_unmapped_environment_variable(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Documents a known limitation rather than pretending it does not exist.
@@ -116,3 +122,29 @@ class TestTokenizationKey:
     def test_accepts_rotated_key_version(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("PII_KEY_VERSION", "v2")
         assert PlatformConfig().pii_key_version == "v2"
+
+
+class TestDotenvFile:
+    """Regression: one .env serves every component, so it holds variables a given
+    component's model does not know. extra="forbid" made such a file unloadable."""
+
+    def test_variables_the_model_does_not_know_are_ignored(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        content = "ENV=staging\nKAFKA_BOOTSTRAP_SERVERS=kafka:19092\n"
+        (tmp_path / ".env").write_text(content, encoding="utf-8")
+        monkeypatch.delenv("ENV", raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert PlatformConfig().env is Environment.STAGING
+
+    def test_the_repository_template_loads(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        template = Path(__file__).resolve().parents[3] / ".env.example"
+        (tmp_path / ".env").write_bytes(template.read_bytes())
+        for name in ("ENV", "LOG_LEVEL", "DEFAULT_TENANT_ID", "PII_KEY_VERSION"):
+            monkeypatch.delenv(name, raising=False)
+        monkeypatch.chdir(tmp_path)
+        config = PlatformConfig()
+        assert config.env is Environment.DEVELOPMENT
+        assert config.default_tenant_id is TenantId.MALI

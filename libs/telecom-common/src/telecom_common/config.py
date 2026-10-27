@@ -65,25 +65,30 @@ class BaseConfig(BaseSettings):
     Subclass it to add component-specific settings; the shared behaviour
     (``.env`` loading, case-insensitive names) comes for free.
 
-    ``extra="forbid"`` rejects unknown keyword arguments passed to the
-    constructor, which catches mistakes in code and in tests.
+    ``extra="ignore"`` is required, not a convenience. The repository has **one**
+    ``.env`` shared by every component (Kafka, MinIO, Trino, the LLM gateway...), and
+    each component's configuration models only its own subset. With
+    ``extra="forbid"``, pydantic-settings rejects every variable of that file the
+    model does not know, so the project's own ``.env.example`` could not be loaded
+    (``Extra inputs are not permitted``). The process environment is ignored in the
+    same way, for the same reason: it holds hundreds of unrelated variables.
 
-    Known limitation: it does **not** catch a typo in an environment variable.
-    An unmapped variable such as ``KAFKA_BOOTSRAP_SERVERS`` is silently
-    ignored, and that is the only sane behaviour -- the process environment
-    holds hundreds of variables belonging to other tools, and failing on them
-    would make the application unstartable. Guarding against that class of
-    typo would require an ``env_prefix`` and an explicit scan of the
-    environment, which is not worth the ergonomic cost here: the variables are
-    conventionally named (``KAFKA_BOOTSTRAP_SERVERS``, ``GROQ_API_KEY``) and
-    are validated at the point of use instead, where a missing value raises.
+    Two consequences, stated rather than hidden:
+
+    * a typo in a *constructor* argument is no longer rejected at runtime; it is
+      caught statically instead, since ``mypy`` flags unknown arguments of a
+      pydantic model (pinned by a test that relies on ``warn_unused_ignores``);
+    * a typo in a *variable name* (``KAFKA_BOOTSRAP_SERVERS``) is silently ignored.
+      Guarding against it would need an ``env_prefix`` and an explicit scan of the
+      environment, which is not worth the cost: values are validated where they
+      are used, and a missing one raises there.
     """
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="forbid",
+        extra="ignore",
     )
 
 
