@@ -98,6 +98,7 @@ compromis soit acceptable.
 |---|---|---|---|---|
 | `network.metrics` | 12 | 7 j | `cell_id` | Ordre garanti par cellule (indispensable à la détection d'anomalie) |
 | `network.alarms` | 6 | 30 j | `site_id` | Faible débit, forte valeur, rétention longue |
+| `device.events` | 6 | 7 j | `equipment_id` | Télémétrie d'équipements (routeurs, antennes), cadence de 4 min : ajouté au lot 1.5 avec le contrat du lot 1.2 |
 | `cdr.events` | 24 | 3 j | `caller_id` ⚠️ | Flux le plus volumineux (99 M/j) |
 | `data.sessions` | 18 | 3 j | `subscriber_id` ⚠️ | |
 | `sms.events` | 12 | 3 j | `sender_id` ⚠️ | Pics extrêmes (Nouvel An ×28) |

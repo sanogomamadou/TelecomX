@@ -39,6 +39,7 @@ envisagées, la décision retenue et ses conséquences — y compris négatives.
 | [017](ADR-017-observability-stack.md) | OpenTelemetry comme standard d'instrumentation unique | ✅ Accepted | Observabilité | 7 |
 | [018](ADR-018-reference-data.md) | Données de référence synthétiques, déterministes et versionnées comme seeds | ✅ Accepted | Données | 1 |
 | [019](ADR-019-event-generators.md) | Générateurs d'événements déterministes, couplés par un modèle d'indicateurs, avec vérité terrain | ✅ Accepted | Données | 1 |
+| [020](ADR-020-core-runtime.md) | Socle d'exécution local : profil `core`, garde-fous vérifiés sans Docker | ✅ Accepted | Infrastructure | 1 |
 
 ## Décisions à réexaminer
 

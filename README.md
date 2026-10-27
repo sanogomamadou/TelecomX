@@ -97,7 +97,7 @@ actions sous contrôle humain.
 ```bash
 git clone <repo> && cd TelecomX
 make setup                 # outils Python, hooks pre-commit, dépendances
-cp .env.example .env       # puis renseigner GROQ_API_KEY
+make env                   # crée .env et génère les secrets locaux ; renseigner GROQ_API_KEY (Phase 4)
 ```
 
 ### Profils Docker Compose
@@ -148,7 +148,7 @@ Chaque étape est **tracée** (une seule trace OpenTelemetry de bout en bout) et
 | Phase | Contenu | Statut |
 |---|---|---|
 | **0** | Product & Architecture — PRD, SRS, 17 ADR, threat model, contrats, SLO | ✅ **Terminée** |
-| **1** | Data Platform — générateurs, Kafka, Spark, Iceberg, Trino, dbt | 🔄 **En cours** — lots 1.1 (bibliothèque socle), 1.2 (génération de code depuis les contrats), 1.3 (référentiels synthétiques) et 1.4 (générateurs d'événements) terminés |
+| **1** | Data Platform — générateurs, Kafka, Spark, Iceberg, Trino, dbt | 🔄 **En cours** — lots 1.1 (bibliothèque socle), 1.2 (génération de code depuis les contrats), 1.3 (référentiels synthétiques), 1.4 (générateurs d'événements) et 1.5 (socle Docker `core`) terminés |
 | **2** | Data Quality & Governance — Schema Registry, DQ gates, lineage, PII | ⏳ |
 | **3** | ML Platform — 5 modèles, MLflow, serving, drift | ⏳ |
 | **4** | Agent Platform — 8 agents, tools, RAG, mémoire, HITL, évaluation | ⏳ |
@@ -171,7 +171,7 @@ Chaque étape est **tracée** (une seule trace OpenTelemetry de bout en bout) et
 - [Données](docs/architecture/02-data-architecture.md) — zones, partitionnement, qualité, lineage
 - [Sécurité](docs/architecture/03-security-architecture.md) — modèle de confiance, 5 couches de contrôle
 - [IA](docs/architecture/04-ai-architecture.md) — ML vs LLM, agents, tools, RAG, évaluation
-- [**19 ADR**](docs/adr/README.md) — chaque décision structurante, ses alternatives et ses conséquences
+- [**20 ADR**](docs/adr/README.md) — chaque décision structurante, ses alternatives et ses conséquences
 
 ### Données
 - [Contrats](docs/data/contracts/README.md) — gouvernance, évolution de schéma, DLQ

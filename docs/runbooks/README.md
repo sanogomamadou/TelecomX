@@ -27,6 +27,7 @@ précise. Il s'adresse à une personne d'astreinte, potentiellement à 3 h du ma
 
 | Phase | Runbook | Alerte associée |
 |---|---|---|
+| 1 | [Démarrer et dépanner le socle `core`](core-stack.md) | — (procédure de développement) |
 | 1 | Consumer lag Kafka élevé | `KafkaConsumerLagHigh` |
 | 1 | Job Spark Streaming arrêté | `SparkStreamingJobDown` |
 | 1 | Fraîcheur de données dégradée | `DataFreshnessBreached` |

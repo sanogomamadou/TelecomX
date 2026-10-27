@@ -12,6 +12,7 @@ c'est possible : une règle écrite est une suggestion, une règle contrôlée e
 
 ```powershell
 .\make.ps1 setup        # outils, dépendances, hooks   (Linux/macOS : make setup)
+.\make.ps1 env          # crée .env et génère les secrets locaux (une fois)
 .\make.ps1 ci           # toute la chaîne de qualité en local
 .\make.ps1 help         # toutes les cibles
 ```
@@ -67,6 +68,9 @@ retouché ne peut pas être fusionné.
 |---|---|---|
 | un contrat `.avsc` | `make codegen` | `libs/telecom-common/src/telecom_common/contracts/generated/` |
 | le générateur de référentiels | `make refdata` | `data-platform/dbt/seeds/*.csv` |
+
+Les topics Kafka sont déclarés dans un seul fichier, `data-platform/kafka/topics.conf` ; un test
+vérifie qu'il reste cohérent avec les contrats et l'ADR-002.
 
 Voir [contrats de données](docs/data/contracts/README.md) et [seeds](data-platform/dbt/seeds/README.md).
 
