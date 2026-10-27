@@ -1,0 +1,5 @@
+# Scripts run inside Linux containers: a CRLF checkout on Windows would break them
+# ("bash\r: No such file or directory"). Pin line endings for what containers read.
+*.sh text eol=lf
+docker-compose.yml text eol=lf
+data-platform/kafka/topics.conf text eol=lf

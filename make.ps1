@@ -70,7 +70,7 @@ function Show-NotYet {
 
 $Targets = [ordered]@{
     'setup'            = 'Install tooling, dependencies and git hooks'
-    'env'              = 'Create .env from the template if missing'
+    'env'              = 'Create .env and generate the empty local secrets'
     'up-core'          = 'Start core services: Kafka, Schema Registry, MinIO, PostgreSQL, Redis (2.1 GB)'
     'up-lakehouse'     = 'Start core + Iceberg, Spark, Trino (6.2 GB)'
     'up-ml'            = 'Start core + MLflow, model serving (2.7 GB)'
@@ -128,14 +128,21 @@ switch ($Target) {
     }
 
     'env' {
-        if (-not (Test-Path .env)) {
-            Copy-Item .env.example .env
-            Write-Ok '.env created - fill in GROQ_API_KEY'
-        }
-        else { Write-Ok '.env is already present' }
+        Invoke-Py @('python', 'scripts/init_env.py')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
 
-    'up-core'      { Show-NotYet 'up-core' 1 }
+    'up-core' {
+        if (-not (Test-Path .env)) {
+            Invoke-Py @('python', 'scripts/init_env.py')
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
+        Write-Step 'Starting the core profile (Kafka, Schema Registry, MinIO, PostgreSQL, Redis)'
+        & docker compose --profile core up -d
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        & docker compose --profile core ps -a
+        Write-Ok "kafka-init and minio-init are one-shot: 'Exited (0)' is their success state"
+    }
     'up-lakehouse' { Show-NotYet 'up-lakehouse' 1 }
     'up-ml'        { Show-NotYet 'up-ml' 3 }
     'up-agents'    { Show-NotYet 'up-agents' 4 }

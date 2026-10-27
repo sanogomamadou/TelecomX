@@ -44,15 +44,17 @@ setup: ## Install tooling, dependencies and git hooks
 	@echo "==> Done. Copy .env.example to .env and set GROQ_API_KEY."
 
 .PHONY: env
-env: ## Create .env from the template if missing
-	@test -f .env || (cp .env.example .env && echo "==> .env created — fill in GROQ_API_KEY")
-	@test -f .env && echo "==> .env is present"
+env: ## Create .env and generate the empty local secrets (never overwrites a value)
+	@$(PYTHON) scripts/init_env.py
 
 # --- Docker Compose profiles (see ADR-011) -----------------------------------
 
 .PHONY: up-core
 up-core: ## Start core services: Kafka, Schema Registry, MinIO, PostgreSQL, Redis (2.1 GB)
-	$(call not_yet,up-core,1)
+	@test -f .env || $(PYTHON) scripts/init_env.py
+	@$(COMPOSE) --profile core up -d
+	@$(COMPOSE) --profile core ps -a
+	@echo "==> kafka-init and minio-init are one-shot: 'Exited (0)' is their success state"
 
 .PHONY: up-lakehouse
 up-lakehouse: ## Start core + Iceberg, Spark, Trino (6.2 GB)

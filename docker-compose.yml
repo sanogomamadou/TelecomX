@@ -1,0 +1,178 @@
+# =============================================================================
+#  TelecomX platform - Docker Compose
+#
+#  The stack needs ~14 GB but the dev machine gives Docker ~7 GB (ADR-011), so
+#  services are grouped in PROFILES and never all started at once:
+#
+#      make up-core        # Kafka, Schema Registry, MinIO, PostgreSQL, Redis
+#
+#  Rules enforced by tests/unit/infra/test_compose.py:
+#    - every service has a memory limit, every JVM a heap <= ~70 % of it;
+#    - every published port is bound to 127.0.0.1;
+#    - no secret has a default value: ${VAR:?} makes compose refuse to start;
+#    - every image is pinned to an explicit version (no latest).
+# =============================================================================
+
+name: telecomx
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  # ---------------------------------------------------------------- core ----
+  kafka:
+    <<: *restart
+    image: apache/kafka:3.8.1
+    profiles: [core]
+    hostname: kafka
+    mem_limit: 1g
+    ports:
+      - "127.0.0.1:9092:9092"
+    environment:
+      # Single node playing both roles (KRaft, no ZooKeeper - ADR-002).
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # Two doors: containers use kafka:19092, the host uses localhost:9092.
+      KAFKA_LISTENERS: INTERNAL://:19092,HOST://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092,HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # One broker => replication factor 1 everywhere (accepted limit, ADR-002).
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      # Topics are declared in data-platform/kafka/topics.conf, never created by accident.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_RETENTION_HOURS: "24"
+      # Heap = 50 % of the 1 GB limit: the rest is page cache and off-heap. A limit
+      # without -Xmx is the classic silent OOMKilled (ADR-011).
+      KAFKA_HEAP_OPTS: -Xmx512m -Xms512m
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:19092 >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  kafka-init:
+    image: apache/kafka:3.8.1
+    profiles: [core]
+    mem_limit: 256m
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      BOOTSTRAP_SERVERS: kafka:19092
+      TOPICS_FILE: /config/topics.conf
+      KAFKA_HEAP_OPTS: -Xmx128m -Xms64m
+    volumes:
+      - ./data-platform/kafka/topics.conf:/config/topics.conf:ro
+      - ./data-platform/kafka/create-topics.sh:/config/create-topics.sh:ro
+    entrypoint: ["/bin/bash", "/config/create-topics.sh"]
+    restart: "no"
+
+  schema-registry:
+    <<: *restart
+    image: confluentinc/cp-schema-registry:7.7.1
+    profiles: [core]
+    hostname: schema-registry
+    mem_limit: 400m
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:19092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      # Ingestion topics evolve BACKWARD (ADR-015); output topics get FULL per subject.
+      SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: BACKWARD
+      SCHEMA_REGISTRY_HEAP_OPTS: -Xmx256m -Xms128m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/subjects >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  minio:
+    <<: *restart
+    image: minio/minio:RELEASE.2024-10-13T13-34-11Z
+    profiles: [core]
+    command: server /data --console-address ":9001"
+    mem_limit: 300m
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env (run make env)}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env (run make env)}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:RELEASE.2024-10-08T09-37-26Z
+    profiles: [core]
+    mem_limit: 128m
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env (run make env)}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env (run make env)}
+    volumes:
+      - ./infrastructure/docker/minio-init.sh:/config/minio-init.sh:ro
+    entrypoint: ["/bin/sh", "/config/minio-init.sh"]
+    restart: "no"
+
+  postgres:
+    <<: *restart
+    image: postgres:16.4-alpine
+    profiles: [core]
+    mem_limit: 300m
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-telecomx}
+      POSTGRES_USER: ${POSTGRES_USER:-telecomx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (run make env)}
+    # Small footprint: 64 MB of shared buffers is plenty for metadata and HITL state.
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=50"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    <<: *restart
+    image: redis:7.4-alpine
+    profiles: [core]
+    # A cache, not a store: bounded memory, least-recently-used eviction, no persistence.
+    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+    mem_limit: 100m
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  kafka-data:
+  minio-data:
+  postgres-data:

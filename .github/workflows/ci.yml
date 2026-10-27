@@ -204,12 +204,35 @@ jobs:
         run: uvx pip-audit --strict || echo "::warning::pip-audit reported findings"
 
   # ---------------------------------------------------------------------------
+  # The Compose file must at least be loadable: a typo, an unknown key or a
+  # missing required variable is caught here instead of on a developer's laptop.
+  # The unit tests (tests/unit/infra) check the rules around memory and secrets.
+  # ---------------------------------------------------------------------------
+  compose:
+    name: Docker Compose file
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render the core profile with placeholder variables
+        env:
+          S3_ACCESS_KEY: placeholder
+          S3_SECRET_KEY: placeholder
+          POSTGRES_PASSWORD: placeholder
+        run: docker compose --profile core config --quiet
+      - name: Refuse to render without the required secrets
+        run: |
+          if docker compose --profile core config --quiet 2>/dev/null; then
+            echo "::error::Compose rendered without its required secrets"
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
   # Single required status check — branch protection points at this one job.
   # ---------------------------------------------------------------------------
   ci-passed:
     name: CI passed
     if: always()
-    needs: [contracts, secrets, lint, typecheck, architecture, test]
+    needs: [contracts, compose, secrets, lint, typecheck, architecture, test]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any required job failed
