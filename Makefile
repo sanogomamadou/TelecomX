@@ -114,8 +114,8 @@ format: ## Auto-fix formatting and lint issues
 		|| $(PYTHON) -m ruff check --fix . && $(PYTHON) -m ruff format .
 
 .PHONY: typecheck
-typecheck: ## Run mypy (strict on libs/)
-	@uv run mypy libs
+typecheck: ## Run mypy (strict on libs/, standard on generators)
+	@uv run mypy libs data-platform/generators/src
 
 .PHONY: test
 test: ## Run unit tests with coverage
@@ -135,6 +135,15 @@ codegen: ## Regenerate event models and manifest from the Avro contracts
 codegen-check: ## Fail if generated contract code is stale
 	@uv run python data-platform/schemas/generate.py --check
 
+.PHONY: refdata
+refdata: ## Regenerate the synthetic reference data (dbt seeds)
+	@echo "==> Generating reference data into data-platform/dbt/seeds"
+	@uv run python -m telecomx_generators.reference
+
+.PHONY: refdata-check
+refdata-check: ## Fail if the committed reference data is stale
+	@uv run python -m telecomx_generators.reference --check
+
 # No `|| echo` fallbacks below: a check that cannot fail does not check anything.
 .PHONY: validate
 validate: ## Validate contracts, generated code freshness and architecture rules
@@ -142,6 +151,8 @@ validate: ## Validate contracts, generated code freshness and architecture rules
 	@$(PYTHON) scripts/validate_contracts.py
 	@echo "==> Checking generated contract code is up to date"
 	@uv run python data-platform/schemas/generate.py --check
+	@echo "==> Checking reference data is up to date"
+	@uv run python -m telecomx_generators.reference --check
 	@echo "==> Checking architecture import rules"
 	@uv run lint-imports
 

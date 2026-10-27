@@ -89,6 +89,8 @@ $Targets = [ordered]@{
     'test-integration' = 'Run integration tests (requires running services)'
     'codegen'          = 'Regenerate event models and manifest from the Avro contracts'
     'codegen-check'    = 'Fail if generated contract code is stale'
+    'refdata'          = 'Regenerate the synthetic reference data (dbt seeds)'
+    'refdata-check'    = 'Fail if the committed reference data is stale'
     'validate'         = 'Validate contracts, generated code freshness and architecture rules'
     'security'         = 'Run security scans (secrets, dependencies)'
     'ci'               = 'Run the full local CI pipeline'
@@ -184,7 +186,7 @@ switch ($Target) {
 
     'typecheck' {
         Write-Step 'Running mypy'
-        $paths = @('libs', 'apps', 'agents', 'ml-platform') | Where-Object {
+        $paths = @('libs', 'data-platform/generators/src', 'apps', 'agents', 'ml-platform') | Where-Object {
             (Test-Path $_) -and (Get-ChildItem $_ -Recurse -Filter *.py -ErrorAction SilentlyContinue)
         }
         if (-not $paths) { Write-Warn 'No Python packages to check yet (Phase 1)'; break }
@@ -221,12 +223,28 @@ switch ($Target) {
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
 
+    'refdata' {
+        Write-Step 'Generating reference data into data-platform/dbt/seeds'
+        Invoke-Py @('python', '-m', 'telecomx_generators.reference')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Write-Ok 'Reference data is up to date - commit it with the generator change'
+    }
+
+    'refdata-check' {
+        Write-Step 'Checking reference data is up to date'
+        Invoke-Py @('python', '-m', 'telecomx_generators.reference', '--check')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+
     'validate' {
         Write-Step 'Validating Avro data contracts'
         & python scripts/validate_contracts.py
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         Write-Step 'Checking generated contract code is up to date'
         Invoke-Py @('python', 'data-platform/schemas/generate.py', '--check')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Write-Step 'Checking reference data is up to date'
+        Invoke-Py @('python', '-m', 'telecomx_generators.reference', '--check')
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         Write-Step 'Checking architecture import rules'
         Invoke-Py @('lint-imports')

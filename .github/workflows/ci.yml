@@ -36,6 +36,8 @@ jobs:
           filters: |
             contracts:
               - 'data-platform/schemas/**'
+              - 'data-platform/generators/**'
+              - 'data-platform/dbt/seeds/**'
               - 'scripts/validate_contracts.py'
             python:
               - '**/*.py'
@@ -73,6 +75,10 @@ jobs:
       # hand, fails here and cannot be merged.
       - name: Generated contract code is up to date
         run: uv run python data-platform/schemas/generate.py --check
+      # Same principle for the synthetic reference data: the committed seeds must be
+      # exactly what the (deterministic) generator produces.
+      - name: Reference data is up to date
+        run: uv run python -m telecomx_generators.reference --check
 
   # ---------------------------------------------------------------------------
   # Secret scanning runs unconditionally — a leaked secret is never "unrelated".
@@ -121,7 +127,7 @@ jobs:
       # Only packages that exist: mypy exits with an error on a directory that holds
       # no .py file. Add apps, agents and ml-platform here as they gain code.
       - name: Mypy
-        run: uv run mypy libs
+        run: uv run mypy libs data-platform/generators/src
 
   architecture:
     name: Architecture rules

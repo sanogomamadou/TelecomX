@@ -57,6 +57,13 @@ repos:
 
       # Fires on the contracts AND on the generated output, so that both an edited
       # contract and a hand-edited generated file are caught before the commit exists.
+      - id: reference-data-is-fresh
+        name: Reference data (dbt seeds) is up to date
+        entry: uv run python -m telecomx_generators.reference --check
+        language: system
+        files: ^(data-platform/generators/.*\.py|data-platform/dbt/seeds/.*\.csv)$
+        pass_filenames: false
+
       - id: generated-contract-code-is-fresh
         name: Generated contract code is up to date
         entry: uv run python data-platform/schemas/generate.py --check
