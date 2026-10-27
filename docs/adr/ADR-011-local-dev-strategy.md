@@ -183,7 +183,9 @@ zombie (`Running` mais ne répondant pas, `vmmemWSL` à 40 Mo), et le moteur Doc
 
 Spark avait été dimensionné sur le débit de **production** (2 475 msg/s) alors que
 l'environnement de développement tourne à `SPEED_FACTOR=0.001`, soit **~2,5 msg/s** —
-**mille fois moins**. Allouer 4 Go à un executor traitant 2,5 messages par seconde n'avait
+**mille fois moins**. *(Mesuré au lot 1.4 sur le générateur réel : ~4 msg/s de trafic
+transactionnel, auxquels s'ajoutent ~2 msg/s de flux périodiques `network.metrics` et
+`device.events`, soit ~6 msg/s au total. L'ordre de grandeur et la conclusion sont inchangés.)* Allouer 4 Go à un executor traitant 2,5 messages par seconde n'avait
 aucun fondement.
 
 | Service | Avant | Après | Configuration |

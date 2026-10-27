@@ -72,7 +72,7 @@ actions opérationnelles sous contrôle humain**.
 | **Total** | **~2 475 msg/s** | **~17 800 msg/s** | **~214 M évén./jour** |
 
 > 📐 **Facteur d'échelle de développement.** L'environnement local ne peut pas soutenir 2 475 msg/s.
-> Les générateurs exposent un paramètre `SPEED_FACTOR` (défaut `0.001` en dev, soit ~2,5 msg/s)
+> Les générateurs exposent un paramètre `SPEED_FACTOR` (défaut `0.001` en dev, soit ~2,5 msg/s ; ~6 msg/s mesurés avec les flux périodiques, voir ADR-011)
 > qui préserve **toutes les proportions statistiques** (distributions, saisonnalité, taux d'anomalie)
 > en ne réduisant que le débit. Les dimensionnements de partitions Kafka et le sizing Spark sont,
 > eux, calculés pour la volumétrie de production. Voir [ADR-011](../adr/ADR-011-local-dev-strategy.md).
