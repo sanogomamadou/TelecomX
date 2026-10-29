@@ -19,8 +19,8 @@ pytestmark = pytest.mark.unit
 ROOT = Path(__file__).resolve().parents[3]
 COMPOSE = ROOT / "docker-compose.yml"
 
-CORE_LONG_RUNNING = {"kafka", "schema-registry", "minio", "postgres", "redis"}
-CORE_ONE_SHOT = {"kafka-init", "minio-init"}
+CORE_LONG_RUNNING = {"kafka", "schema-registry", "seaweedfs", "postgres", "redis"}
+CORE_ONE_SHOT = {"kafka-init", "s3-init"}
 #: ADR-011: the core profile is budgeted at 2.1 GB (decimal), with a little rounding room.
 CORE_BUDGET_MB = 2200
 
@@ -117,7 +117,7 @@ class TestSecurity:
                     continue
                 seen += 1
                 assert re.fullmatch(r"\$\{[A-Z0-9_]+:\?[^}]+\}", value), f"{name}.{key} = {value!r}"
-        assert seen >= 4
+        assert seen >= 3  # S3_ACCESS_KEY, S3_SECRET_KEY, POSTGRES_PASSWORD
 
     def test_required_variables_exist_in_the_template(self, services: dict[str, Any]) -> None:
         template = (ROOT / ".env.example").read_text(encoding="utf-8")
@@ -148,7 +148,7 @@ class TestReliability:
     def test_one_shot_jobs_wait_for_a_healthy_dependency_and_do_not_restart(
         self, services: dict[str, Any]
     ) -> None:
-        for name, dependency in (("kafka-init", "kafka"), ("minio-init", "minio")):
+        for name, dependency in (("kafka-init", "kafka"), ("s3-init", "seaweedfs")):
             service = services[name]
             assert service["depends_on"][dependency]["condition"] == "service_healthy"
             assert service["restart"] == "no"
@@ -162,7 +162,7 @@ class TestReliability:
         ] == []
 
     def test_state_lives_in_named_volumes(self, compose: dict[str, Any]) -> None:
-        assert set(compose["volumes"]) == {"kafka-data", "minio-data", "postgres-data"}
+        assert set(compose["volumes"]) == {"kafka-data", "seaweedfs-data", "postgres-data"}
 
     def test_mounted_files_exist(self, services: dict[str, Any]) -> None:
         for name, service in services.items():
@@ -215,3 +215,43 @@ class TestKafkaBroker:
             _env(services["schema-registry"])["SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL"]
             == "BACKWARD"
         )
+
+
+class TestObjectStorage:
+    """ADR-021: SeaweedFS behind the S3 API, after MinIO's images were withdrawn."""
+
+    #: Repositories that no longer exist on Docker Hub (checked 2026-10-28). Referencing
+    #: one makes `docker compose pull` fail, which is how this was discovered.
+    WITHDRAWN = ("minio/minio", "minio/mc")
+
+    def test_no_image_comes_from_a_withdrawn_repository(self, services: dict[str, Any]) -> None:
+        used = {name: s["image"] for name, s in services.items()}
+        bad = {n: i for n, i in used.items() if any(i.startswith(w) for w in self.WITHDRAWN)}
+        assert bad == {}
+
+    def test_s3_endpoint_of_the_template_matches_the_published_port(
+        self, services: dict[str, Any]
+    ) -> None:
+        template = (ROOT / ".env.example").read_text(encoding="utf-8")
+        endpoint = re.search(r"^S3_ENDPOINT=http://localhost:(\d+)", template, re.MULTILINE)
+        assert endpoint, "S3_ENDPOINT missing from .env.example"
+        assert f"127.0.0.1:{endpoint.group(1)}:8333" in services["seaweedfs"]["ports"]
+
+    def test_go_memory_ceiling_is_below_the_container_limit(self, services: dict[str, Any]) -> None:
+        checked = 0
+        for name, service in services.items():
+            ceiling = _env(service).get("GOMEMLIMIT")
+            if ceiling is None:
+                continue
+            checked += 1
+            match = re.fullmatch(r"(\d+)MiB", ceiling)
+            assert match, f"{name}: unreadable GOMEMLIMIT {ceiling!r}"
+            assert int(match.group(1)) <= 0.7 * _memory_mb(service["mem_limit"]), name
+        assert checked == 2  # seaweedfs and s3-init
+
+    def test_credentials_reach_the_container_only_through_the_environment(
+        self, services: dict[str, Any]
+    ) -> None:
+        command = " ".join(services["seaweedfs"]["command"])
+        assert "$$S3_ACCESS_KEY" in command and "$$S3_SECRET_KEY" in command
+        assert not re.search(r"accessKey\":\"[A-Za-z0-9]{8,}", command)

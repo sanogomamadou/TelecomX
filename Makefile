@@ -50,11 +50,11 @@ env: ## Create .env and generate the empty local secrets (never overwrites a val
 # --- Docker Compose profiles (see ADR-011) -----------------------------------
 
 .PHONY: up-core
-up-core: ## Start core services: Kafka, Schema Registry, MinIO, PostgreSQL, Redis (2.1 GB)
+up-core: ## Start core services: Kafka, Schema Registry, SeaweedFS (S3), PostgreSQL, Redis (2.1 GB)
 	@test -f .env || $(PYTHON) scripts/init_env.py
 	@$(COMPOSE) --profile core up -d
 	@$(COMPOSE) --profile core ps -a
-	@echo "==> kafka-init and minio-init are one-shot: 'Exited (0)' is their success state"
+	@echo "==> kafka-init and s3-init are one-shot: 'Exited (0)' is their success state"
 
 .PHONY: up-lakehouse
 up-lakehouse: ## Start core + Iceberg, Spark, Trino (6.2 GB)

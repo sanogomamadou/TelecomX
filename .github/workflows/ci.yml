@@ -219,6 +219,18 @@ jobs:
           S3_SECRET_KEY: placeholder
           POSTGRES_PASSWORD: placeholder
         run: docker compose --profile core config --quiet
+      # An image withdrawn from its registry passes every static check and fails only at
+      # the first real pull (this is how MinIO's disappearance was found, ADR-021).
+      - name: Check that every image still exists in its registry
+        env:
+          S3_ACCESS_KEY: placeholder
+          S3_SECRET_KEY: placeholder
+          POSTGRES_PASSWORD: placeholder
+        run: |
+          for image in $(docker compose --profile core config --images | sort -u); do
+            echo "checking $image"
+            docker manifest inspect "$image" > /dev/null || { echo "::error::image not found: $image"; exit 1; }
+          done
       - name: Refuse to render without the required secrets
         run: |
           if docker compose --profile core config --quiet 2>/dev/null; then

@@ -71,7 +71,7 @@ function Show-NotYet {
 $Targets = [ordered]@{
     'setup'            = 'Install tooling, dependencies and git hooks'
     'env'              = 'Create .env and generate the empty local secrets'
-    'up-core'          = 'Start core services: Kafka, Schema Registry, MinIO, PostgreSQL, Redis (2.1 GB)'
+    'up-core'          = 'Start core services: Kafka, Schema Registry, SeaweedFS (S3), PostgreSQL, Redis (2.1 GB)'
     'up-lakehouse'     = 'Start core + Iceberg, Spark, Trino (6.2 GB)'
     'up-ml'            = 'Start core + MLflow, model serving (2.7 GB)'
     'up-agents'        = 'Start core + Qdrant, agent service (2.8 GB)'
@@ -137,11 +137,11 @@ switch ($Target) {
             Invoke-Py @('python', 'scripts/init_env.py')
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
-        Write-Step 'Starting the core profile (Kafka, Schema Registry, MinIO, PostgreSQL, Redis)'
+        Write-Step 'Starting the core profile (Kafka, Schema Registry, SeaweedFS, PostgreSQL, Redis)'
         & docker compose --profile core up -d
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         & docker compose --profile core ps -a
-        Write-Ok "kafka-init and minio-init are one-shot: 'Exited (0)' is their success state"
+        Write-Ok "kafka-init and s3-init are one-shot: 'Exited (0)' is their success state"
     }
     'up-lakehouse' { Show-NotYet 'up-lakehouse' 1 }
     'up-ml'        { Show-NotYet 'up-ml' 3 }

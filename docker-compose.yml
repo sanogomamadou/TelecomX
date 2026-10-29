@@ -4,7 +4,7 @@
 #  The stack needs ~14 GB but the dev machine gives Docker ~7 GB (ADR-011), so
 #  services are grouped in PROFILES and never all started at once:
 #
-#      make up-core        # Kafka, Schema Registry, MinIO, PostgreSQL, Redis
+#      make up-core        # Kafka, Schema Registry, SeaweedFS (S3), PostgreSQL, Redis
 #
 #  Rules enforced by tests/unit/infra/test_compose.py:
 #    - every service has a memory limit, every JVM a heap <= ~70 % of it;
@@ -101,39 +101,52 @@ services:
       retries: 10
       start_period: 20s
 
-  minio:
+  # Object storage. MinIO would be the natural choice (ADR-004) but its images were
+  # withdrawn from Docker Hub; SeaweedFS replaces it behind the same S3 API (ADR-021).
+  # The S3 gateway listens on 8333 inside the container and is published on 9000, so
+  # S3_ENDPOINT=http://localhost:9000 is unchanged for every client.
+  seaweedfs:
     <<: *restart
-    image: minio/minio:RELEASE.2024-10-13T13-34-11Z
+    image: chrislusf/seaweedfs:4.48
     profiles: [core]
-    command: server /data --console-address ":9001"
+    hostname: seaweedfs
     mem_limit: 300m
     ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env (run make env)}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env (run make env)}
-    volumes:
-      - minio-data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  minio-init:
-    image: minio/mc:RELEASE.2024-10-08T09-37-26Z
-    profiles: [core]
-    mem_limit: 128m
-    depends_on:
-      minio:
-        condition: service_healthy
+      - "127.0.0.1:9000:8333"
+      - "127.0.0.1:9333:9333"
     environment:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env (run make env)}
       S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env (run make env)}
+      # Go runtime heap ceiling, below the container limit (the Go equivalent of -Xmx).
+      GOMEMLIMIT: 200MiB
+    entrypoint: ["/bin/sh", "-c"]
+    # The S3 identity file is written at start from the environment, so that no
+    # credential exists in the repository. $$ keeps compose from interpolating it.
+    command:
+      - |
+        printf '{"identities":[{"name":"platform","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY" > /tmp/s3.json
+        exec weed server -dir=/data -ip=seaweedfs -master.volumeSizeLimitMB=256 -volume.max=30 -s3 -s3.port=8333 -s3.config=/tmp/s3.json
     volumes:
-      - ./infrastructure/docker/minio-init.sh:/config/minio-init.sh:ro
-    entrypoint: ["/bin/sh", "/config/minio-init.sh"]
+      - seaweedfs-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status && nc -z 127.0.0.1 8333"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  s3-init:
+    image: chrislusf/seaweedfs:4.48
+    profiles: [core]
+    mem_limit: 128m
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+    environment:
+      GOMEMLIMIT: 80MiB
+    volumes:
+      - ./infrastructure/docker/s3-init.sh:/config/s3-init.sh:ro
+    entrypoint: ["/bin/sh", "/config/s3-init.sh"]
     restart: "no"
 
   postgres:
@@ -174,5 +187,5 @@ services:
 
 volumes:
   kafka-data:
-  minio-data:
+  seaweedfs-data:
   postgres-data:

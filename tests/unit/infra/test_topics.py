@@ -94,16 +94,20 @@ BASH = _find_bash()
 @pytest.mark.skipif(BASH is None, reason="no working bash on this machine")
 class TestCreateScript:
     def _run(
-        self, tmp_path: Path, conf: Path
+        self, tmp_path: Path, conf: Path, existing: tuple[str, ...] = ()
     ) -> tuple[subprocess.CompletedProcess[str], list[str]]:
-        """Run the real script against fake kafka tools that only record their arguments."""
+        """Run the real script against fake kafka tools that only record their arguments.
+
+        ``existing`` is what the fake broker answers to ``--list``.
+        """
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         log = tmp_path / "calls.log"
         for tool in ("kafka-topics.sh", "kafka-configs.sh"):
             stub = bin_dir / tool
             stub.write_text(
-                f'#!/bin/bash\necho "{tool} $*" >> "{log.as_posix()}"\n',
+                f'#!/bin/bash\necho "{tool} $*" >> "{log.as_posix()}"\n'
+                'case " $* " in *" --list "*) for t in $FAKE_EXISTING; do echo "$t"; done ;; esac\n',
                 encoding="utf-8",
                 newline="\n",
             )
@@ -113,6 +117,7 @@ class TestCreateScript:
             "BOOTSTRAP_SERVERS": "kafka:19092",
             "TOPICS_FILE": conf.as_posix(),
             "KAFKA_BIN": bin_dir.as_posix(),
+            "FAKE_EXISTING": " ".join(existing),
         }
         result = subprocess.run(  # noqa: S603
             [str(BASH), SCRIPT.as_posix()], env=env, capture_output=True, text=True, check=False
@@ -132,10 +137,26 @@ class TestCreateScript:
         dlq = next(c for c in creates if "--topic cdr.events.dlq " in c + " ")
         assert f"retention.ms={72 * 3600 * 1000}" in dlq
 
-    def test_reapplies_retention_to_existing_topics(self, tmp_path: Path) -> None:
+    def test_a_fresh_broker_needs_no_second_call_per_topic(self, tmp_path: Path) -> None:
+        """One JVM start per topic: creation carries the settings, nothing is altered."""
         _, calls = self._run(tmp_path, TOPICS_FILE)
+        assert [c for c in calls if "--alter" in c] == []
+
+    def test_existing_topics_are_altered_not_recreated(self, tmp_path: Path) -> None:
+        result, calls = self._run(tmp_path, TOPICS_FILE, existing=("cdr.events", "sms.events"))
+        assert result.returncode == 0, result.stderr
         alters = [c for c in calls if "--alter" in c]
-        assert len(alters) == len(_topics())
+        creates = [c for c in calls if "--create" in c]
+        assert len(alters) == 2
+        assert all(f"retention.ms={24 * 3600 * 1000}" in a for a in alters)
+        assert len(creates) == len(_topics()) - 2
+        assert not [c for c in creates if "--topic cdr.events " in c + " "]
+
+    def test_a_topic_contained_in_an_existing_name_is_still_created(self, tmp_path: Path) -> None:
+        """`cdr.events` must not be taken for existing because `cdr.events.dlq` is."""
+        _, calls = self._run(tmp_path, TOPICS_FILE, existing=("cdr.events.dlq",))
+        assert [c for c in calls if "--create" in c and "--topic cdr.events " in c + " "]
+        assert not [c for c in calls if "--alter" in c and "cdr.events " in c + " "]
 
     def test_comments_and_blank_lines_are_ignored(self, tmp_path: Path) -> None:
         conf = tmp_path / "small.conf"
@@ -167,7 +188,7 @@ class TestCreateScript:
         assert "BOOTSTRAP_SERVERS" in result.stderr
 
     def test_script_is_syntactically_valid(self) -> None:
-        for script in (SCRIPT, ROOT / "infrastructure" / "docker" / "minio-init.sh"):
+        for script in (SCRIPT, ROOT / "infrastructure" / "docker" / "s3-init.sh"):
             result = subprocess.run(  # noqa: S603
                 [str(BASH), "-n", script.as_posix()], capture_output=True, text=True, check=False
             )
@@ -183,7 +204,7 @@ class TestLineEndings:
             SCRIPT,
             TOPICS_FILE,
             ROOT / "docker-compose.yml",
-            ROOT / "infrastructure" / "docker" / "minio-init.sh",
+            ROOT / "infrastructure" / "docker" / "s3-init.sh",
         ],
         ids=lambda p: p.name,
     )
