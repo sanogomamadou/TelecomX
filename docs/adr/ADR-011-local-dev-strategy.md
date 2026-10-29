@@ -24,7 +24,7 @@ Un inventaire honnête des empreintes mémoire montre l'impossibilité de tout d
 |---|---|---|---|
 | Kafka (KRaft) | 1,0 GB | MLflow | 0,3 GB |
 | Schema Registry | 0,4 GB | Qdrant | 0,3 GB |
-| MinIO | 0,3 GB | Keycloak | 0,7 GB |
+| SeaweedFS (S3) | 0,3 GB | Keycloak | 0,7 GB |
 | PostgreSQL | 0,3 GB | Prometheus | 0,3 GB |
 | Redis | 0,1 GB | Grafana | 0,2 GB |
 | Iceberg REST catalog | 0,3 GB | Loki | 0,2 GB |
@@ -67,7 +67,7 @@ profil isolé qui manquerait de ses dépendances.
 
 | Profil | Services | RAM | Usage |
 |---|---|---|---|
-| `core` | Kafka, Schema Registry, MinIO, PostgreSQL, Redis | **2,1 GB** | Socle — inclus par tous les autres |
+| `core` | Kafka, Schema Registry, SeaweedFS (S3), PostgreSQL, Redis | **2,1 GB** (*mesuré : ≈ 0,92 GB en régime établi, lot 1.5*) | Socle — inclus par tous les autres |
 | `lakehouse` | core + Iceberg REST + Spark + Trino | **6,2 GB** | Phases 1-2 : ingestion, transformations, dbt |
 | `ml` | core + MLflow + model serving | **2,7 GB** | Phase 3 : entraînement et service de modèles |
 | `agents` | core + Qdrant + agent service | **2,8 GB** | Phase 4 : développement des agents |

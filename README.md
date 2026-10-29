@@ -48,7 +48,7 @@ actions sous contrôle humain.
    CDR / xDR   ──►   Kafka    ──►   Spark ──► Iceberg  ──►  Trino    ──►   Agents (8)
    CRM/Billing       Schema          bronze   silver         + dbt          RAG · Tools
    Mobile Money      Registry        ────────────────► gold                 LangGraph
-   Alarmes / IoT                        MinIO (S3)                              │
+   Alarmes / IoT                        SeaweedFS (S3)                          │
                                                                                 ▼
                                                                    Human-in-the-loop
                                                                                 │
@@ -68,7 +68,7 @@ actions sous contrôle humain.
 | Domaine | Technologie | ADR |
 |---|---|---|
 | Streaming | Apache Kafka (KRaft) + Schema Registry | [002](docs/adr/ADR-002-event-backbone.md) · [015](docs/adr/ADR-015-data-contracts.md) |
-| Lakehouse | Apache Iceberg + MinIO | [003](docs/adr/ADR-003-table-format.md) · [004](docs/adr/ADR-004-object-storage.md) |
+| Lakehouse | Apache Iceberg + SeaweedFS (S3) | [003](docs/adr/ADR-003-table-format.md) · [004](docs/adr/ADR-004-object-storage.md) · [021](docs/adr/ADR-021-seaweedfs-replaces-minio.md) |
 | Traitement | Apache Spark (Structured Streaming) | [005](docs/adr/ADR-005-stream-processing.md) |
 | SQL | Trino + dbt | [006](docs/adr/ADR-006-query-engine.md) · [007](docs/adr/ADR-007-transformation-layer.md) |
 | ML | LightGBM · XGBoost · MLflow | — |
@@ -106,7 +106,7 @@ make env                   # crée .env et génère les secrets locaux ; renseig
 Les services sont donc regroupés en profils — voir [ADR-011](docs/adr/ADR-011-local-dev-strategy.md).
 
 ```bash
-make up-core          # Kafka, Schema Registry, MinIO, PostgreSQL, Redis    (2,1 GB)
+make up-core          # Kafka, Schema Registry, SeaweedFS, PostgreSQL, Redis (2,1 GB)
 make up-lakehouse     # + Iceberg, Spark, Trino                             (6,2 GB)
 make up-ml            # + MLflow, model serving                             (2,7 GB)
 make up-agents        # + Qdrant, agent service                             (2,8 GB)
@@ -171,7 +171,7 @@ Chaque étape est **tracée** (une seule trace OpenTelemetry de bout en bout) et
 - [Données](docs/architecture/02-data-architecture.md) — zones, partitionnement, qualité, lineage
 - [Sécurité](docs/architecture/03-security-architecture.md) — modèle de confiance, 5 couches de contrôle
 - [IA](docs/architecture/04-ai-architecture.md) — ML vs LLM, agents, tools, RAG, évaluation
-- [**20 ADR**](docs/adr/README.md) — chaque décision structurante, ses alternatives et ses conséquences
+- [**21 ADR**](docs/adr/README.md) — chaque décision structurante, ses alternatives et ses conséquences
 
 ### Données
 - [Contrats](docs/data/contracts/README.md) — gouvernance, évolution de schéma, DLQ

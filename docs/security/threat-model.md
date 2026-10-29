@@ -101,7 +101,7 @@ avant l'ère des LLM, ne couvre pas.
 |---|---|---|---|
 | **S** | Producteur non autorisé injectant de faux événements | M × 🟠 | Authentification Kafka (SASL/mTLS en production), ACL par topic |
 | **T** | Empoisonnement de données pour fausser un modèle | F × 🟠 | Validation de contrat, règles métier, détection d'anomalie de volume, immuabilité de bronze permettant l'analyse rétrospective |
-| **I** | Accès direct à MinIO contournant Trino | M × 🔴 | Identifiants de service par composant limités aux préfixes nécessaires ; jamais d'identifiants racine ; bronze non exposé |
+| **I** | Accès direct au stockage objet S3 contournant Trino | M × 🔴 | Identifiants de service par composant limités aux préfixes nécessaires ; jamais d'identifiants racine ; bronze non exposé |
 | **I** | **Lecture directe d'un topic Kafka** : clés et charges utiles portent des identifiants bruts, DLQ comprises | M × 🔴 | ACL par topic réservées aux producteurs et au job d'ingestion ; SASL/mTLS ; rétention plafonnée à celle de bronze ; aucun consommateur applicatif ([ADR-002](../adr/ADR-002-event-backbone.md), correction du 2026-10-27) |
 | **D** | Saturation des topics | F × 🟠 | Quotas Kafka, supervision du lag, DLQ bornée |
 

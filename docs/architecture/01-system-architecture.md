@@ -116,7 +116,7 @@ Sept principes structurent l'ensemble des décisions. Ils sont cités en référ
 │              │ bronze · silver · gold     │     │ 9 systèmes sources simulés    │    │
 │              └───────┬────────────────────┘     └───────────────────────────────┘    │
 │              ┌───────▼────────────────────┐     ┌───────────────────────────────┐    │
-│              │ MinIO (S3)                 │     │ PostgreSQL                    │    │
+│              │ SeaweedFS (S3)             │     │ PostgreSQL                    │    │
 │              │ lake · warehouse · backup  │     │ ops · audit · checkpoints     │    │
 │              └────────────────────────────┘     │ catalogue · vault PII         │    │
 │                                                 └───────────────────────────────┘    │
@@ -142,7 +142,7 @@ Sept principes structurent l'ensemble des décisions. Ils sont cités en référ
 | Trino | Trino | SQL interactif fédéré | `lakehouse`, `demo` | [006](../adr/ADR-006-query-engine.md) |
 | Spark | Spark 3.5 | Streaming et batch | `lakehouse` | [005](../adr/ADR-005-stream-processing.md) |
 | Iceberg REST | Catalogue REST | Métadonnées de tables | `lakehouse` | [003](../adr/ADR-003-table-format.md) |
-| MinIO | MinIO | Stockage objet S3 | `core` | [004](../adr/ADR-004-object-storage.md) |
+| SeaweedFS | SeaweedFS | Stockage objet S3 | `core` | [004](../adr/ADR-004-object-storage.md) · [021](../adr/ADR-021-seaweedfs-replaces-minio.md) |
 | Kafka | Kafka KRaft | Bus d'événements | `core` | [002](../adr/ADR-002-event-backbone.md) |
 | Schema Registry | Confluent SR | Contrats et compatibilité | `core` | [015](../adr/ADR-015-data-contracts.md) |
 | PostgreSQL | PostgreSQL 16 | Ops, audit, checkpoints, vault | `core` | — |
@@ -251,7 +251,7 @@ Voir [ADR-011](../adr/ADR-011-local-dev-strategy.md) pour le budget mémoire dé
 | Aspect | Développement | Production |
 |---|---|---|
 | Kafka | 1 broker, RF=1 | 3 brokers, RF=3, `min.insync.replicas=2` |
-| MinIO | mono-nœud | distribué, erasure coding |
+| Stockage objet S3 | SeaweedFS mono-nœud | stockage S3 distribué (SeaweedFS réparti ou S3 managé) |
 | PostgreSQL | instance unique | primaire + réplique, sauvegarde continue (PITR) |
 | Spark | 1 worker | Spark Operator, autoscaling |
 | Trino | 1 worker | N workers avec HPA |

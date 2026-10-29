@@ -2,7 +2,7 @@
 
 | Champ | Valeur |
 |---|---|
-| **Statut** | ✅ Accepted |
+| **Statut** | ⚠️ Produit remplacé par [ADR-021](ADR-021-seaweedfs-replaces-minio.md) (la règle « API S3 uniquement » reste en vigueur) |
 | **Date** | 2026-09-10 |
 | **Décideur** | M. Sanogo |
 | **Phase** | 1 |

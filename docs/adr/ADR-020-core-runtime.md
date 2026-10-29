@@ -10,7 +10,7 @@
 ## Contexte
 
 [ADR-011](ADR-011-local-dev-strategy.md) a décidé *quoi* démarrer (des profils plutôt que toute la
-pile). Ce lot décide *comment* le premier profil, `core` (Kafka, Schema Registry, MinIO,
+pile). Ce lot décide *comment* le premier profil, `core` (Kafka, Schema Registry, stockage objet S3,
 PostgreSQL, Redis), est décrit, configuré et contrôlé.
 
 Trois risques concrets, tous **silencieux** quand ils se produisent :
@@ -18,7 +18,7 @@ Trois risques concrets, tous **silencieux** quand ils se produisent :
 | Risque | Ce qui se passe |
 |---|---|
 | Limite mémoire de conteneur sans `-Xmx` correspondant | Le processus Java dépasse la limite, le noyau le tue (`OOMKilled`), sans message utile |
-| Port publié sur toutes les interfaces | Kafka, MinIO ou PostgreSQL deviennent joignables depuis le réseau local |
+| Port publié sur toutes les interfaces | Kafka, le stockage objet ou PostgreSQL deviennent joignables depuis le réseau local |
 | Mot de passe avec valeur par défaut dans le fichier | Un identifiant faible se retrouve dans le dépôt, puis en production par copie |
 
 À cela s'ajoute une contrainte de méthode : **le moteur Docker de la machine de développement est
@@ -40,7 +40,7 @@ réel pour être vérifiées.
 1. **Un seul `docker-compose.yml`**, avec des *profils*. `docker compose up` sans profil ne démarre
    **rien** (testé) : démarrer « tout » est précisément ce que la machine ne supporte pas.
 2. **Images officielles épinglées** : `apache/kafka` (KRaft natif, sans ZooKeeper), `confluentinc/cp-schema-registry`,
-   `minio/minio` et `minio/mc`, `postgres:*-alpine`, `redis:*-alpine`. Aucun `latest` (testé).
+   `chrislusf/seaweedfs` (qui remplace MinIO, voir [ADR-021](ADR-021-seaweedfs-replaces-minio.md)), `postgres:*-alpine`, `redis:*-alpine`. Aucun `latest` (testé).
    Choisir `apache/kafka` plutôt que l'image Confluent évite un second éditeur pour un composant
    que le projet ne modifie pas ; le Schema Registry, lui, n'existe en pratique que chez Confluent.
 3. **Deux portes d'entrée Kafka.** Les conteneurs parlent à `kafka:19092`, la machine hôte à
@@ -64,7 +64,7 @@ réel pour être vérifiées.
 
 | ✅ Positives | ⚠️ Négatives / limites assumées |
 |---|---|
-| Les trois risques silencieux sont des tests qui échouent | **Les tests prouvent que le fichier respecte les règles, pas que les conteneurs démarrent.** Le démarrage réel reste à constater sur une machine dont le moteur Docker répond |
+| Les trois risques silencieux sont des tests qui échouent | Les tests prouvent que le fichier respecte les règles ; **seul un démarrage réel prouve que la pile fonctionne**, et il a révélé un défaut que les tests ne pouvaient pas voir (MinIO retiré de Docker Hub, [ADR-021](ADR-021-seaweedfs-replaces-minio.md)) |
 | Une seule définition des topics | Un broker unique : réplication 1, aucune tolérance de panne (déjà acceptée, ADR-002) |
 | Démarrage refusé proprement sans secrets | Redis sans mot de passe en local (port limité à `127.0.0.1`, cache sans donnée sensible) |
 | Fins de ligne imposées à LF | Le Schema Registry n'a que la compatibilité `BACKWARD` par défaut ; `FULL` pour les sorties se règle par sujet à l'enregistrement (lot 1.6) |
@@ -76,10 +76,30 @@ réel pour être vérifiées.
   `.gitattributes` impose LF aux fichiers lus par les conteneurs.
 - Le premier test de variables requises avait été trompé par un commentaire du fichier contenant
   l'exemple `${VAR:?}` : le test ignore maintenant les lignes de commentaire.
-- `mc ilm rule add` n'est pas idempotent (chaque exécution empile une règle) : le script vérifie
-  d'abord.
-- Budget mesuré par test : Kafka 1 GB, Schema Registry 400 MB, MinIO 300 MB, PostgreSQL 300 MB,
+- Le script de topics interroge d'abord la liste existante : un topic neuf est créé avec ses
+  réglages en un seul appel Java, un topic existant n'est que reconfiguré. Mesuré : 120 s → 73 s
+  au rejeu, et la comparaison est exacte (`grep -x`), sinon `cdr.events` serait pris pour existant
+  parce que `cdr.events.dlq` l'est (test par mutation).
+- Budget mesuré par test : Kafka 1 GB, Schema Registry 400 MB, stockage objet 300 MB, PostgreSQL 300 MB,
   Redis 100 MB, soit ≈ 2,1 GB. Les deux conteneurs d'initialisation sont éphémères et exclus.
+
+## Constat du premier démarrage réel (2026-10-29)
+
+| Vérification | Résultat |
+|---|---|
+| 5 services + 2 jobs | Les 5 sont `healthy` sans redémarrage ni `OOMKilled` ; les 2 jobs finissent en `Exited (0)` |
+| Topics | 22 déclarés = 22 présents (+ 2 topics internes de Kafka) ; partitions et rétention conformes (`cdr.events` : 24 partitions, 24 h ; DLQ : 3 partitions, 72 h) |
+| Création automatique | Désactivée : produire vers un topic inconnu échoue (`UNKNOWN_TOPIC_OR_PARTITION`) |
+| Stockage S3 | Sans identifiant ou avec un mauvais secret : 403. Avec les bons : écriture, lecture, listage, suppression OK |
+| Schema Registry | Répond, compatibilité `BACKWARD` |
+| Idempotence | Rejouer `kafka-init` et `s3-init` ne change rien |
+| Persistance | Après `down` puis `up`, les 22 topics et les 6 buckets sont toujours là |
+| **Mémoire réelle** | **≈ 0,92 GB** sur 2,1 GB budgétés (Kafka 481 MiB, Schema Registry 264, SeaweedFS 109, PostgreSQL 54, Redis 9) |
+| Poids des images | ≈ 6,3 GB sur disque, dont **4,2 GB pour le seul Schema Registry** (voir le suivi ci-dessous) |
+
+**À suivre** : l'image `cp-schema-registry` est la plus lourde du profil (4,2 GB) pour un service qui
+n'utilise que 264 MiB. C'est elle dont le téléchargement a échoué à répétition. Une alternative plus
+légère serait à évaluer, mais elle changerait de produit (ADR-015) : décision reportée, non prise.
 
 ## Références
 

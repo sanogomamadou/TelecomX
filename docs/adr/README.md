@@ -23,7 +23,7 @@ envisagées, la décision retenue et ses conséquences — y compris négatives.
 | [001](ADR-001-monorepo.md) | Monorepo plutôt que dépôts multiples | ✅ Accepted | Organisation | 0 |
 | [002](ADR-002-event-backbone.md) | Apache Kafka (mode KRaft) comme bus d'événements | ✅ Accepted | Streaming | 1 |
 | [003](ADR-003-table-format.md) | Apache Iceberg comme format de table du Lakehouse | ✅ Accepted | Lakehouse | 1 |
-| [004](ADR-004-object-storage.md) | MinIO comme stockage objet compatible S3 | ✅ Accepted | Stockage | 1 |
+| [004](ADR-004-object-storage.md) | MinIO comme stockage objet compatible S3 | ⚠️ Produit remplacé par ADR-021 | Stockage | 1 |
 | [005](ADR-005-stream-processing.md) | Spark Structured Streaming comme moteur de traitement | ✅ Accepted | Traitement | 1 |
 | [006](ADR-006-query-engine.md) | Trino comme moteur SQL d'interrogation | ✅ Accepted | Analytics | 1 |
 | [007](ADR-007-transformation-layer.md) | dbt pour les transformations silver → gold | ✅ Accepted | Analytics | 1 |
@@ -40,6 +40,7 @@ envisagées, la décision retenue et ses conséquences — y compris négatives.
 | [018](ADR-018-reference-data.md) | Données de référence synthétiques, déterministes et versionnées comme seeds | ✅ Accepted | Données | 1 |
 | [019](ADR-019-event-generators.md) | Générateurs d'événements déterministes, couplés par un modèle d'indicateurs, avec vérité terrain | ✅ Accepted | Données | 1 |
 | [020](ADR-020-core-runtime.md) | Socle d'exécution local : profil `core`, garde-fous vérifiés sans Docker | ✅ Accepted | Infrastructure | 1 |
+| [021](ADR-021-seaweedfs-replaces-minio.md) | SeaweedFS remplace MinIO derrière l'API S3 | ✅ Accepted | Stockage | 1 |
 
 ## Décisions à réexaminer
 
