@@ -17,7 +17,7 @@ Linux/macOS : `make env && make up-core`.
 | Service | Adresse depuis la machine | Vérification rapide |
 |---|---|---|
 | Kafka | `localhost:9092` | `docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:19092 --list` |
-| Schema Registry | http://localhost:8081 | `curl http://localhost:8081/subjects` |
+| Schema Registry | http://127.0.0.1:8081 | `curl http://127.0.0.1:8081/subjects` |
 | Stockage objet (API S3) | http://localhost:9000 · état du maître http://localhost:9333 | client S3 avec les identifiants de `.env` |
 | PostgreSQL | `localhost:5432` | `docker compose exec postgres pg_isready` |
 | Redis | `localhost:6379` | `docker compose exec redis redis-cli ping` |

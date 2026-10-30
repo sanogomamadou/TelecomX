@@ -132,15 +132,33 @@ Message produit
                                             + producer_id, timestamp
 ```
 
-| Motif de rejet | Action |
-|---|---|
-| Schéma inconnu ou incompatible | Alerte immédiate — indique un producteur non déployé correctement |
-| `tenant_id` absent ou inconnu | Alerte — erreur de configuration du producteur |
-| Contrainte violée (borne, format) | Compté, alerté si le taux dépasse 0,1 % (NFR-DQ-005) |
-| Charge utile illisible | Alerte — problème de sérialisation |
+| Motif de rejet | Code (`RejectionCode`) | Action |
+|---|---|---|
+| Champ absent, type ou symbole invalide | `SCHEMA_VIOLATION` | Alerte immédiate — indique un producteur non déployé correctement |
+| `tenant_id` absent | `MISSING_TENANT` | Alerte — erreur de configuration du producteur |
+| Contrainte violée (borne, format, date future) | `CONSTRAINT_VIOLATION` | Compté, alerté si le taux dépasse 0,1 % (NFR-DQ-005) |
+| Validé mais non encodable en Avro | `SERIALIZATION_ERROR` | Alerte — anomalie du publieur lui-même |
 
-Les messages en DLQ sont **conservés 30 jours et rejouables** après correction. Aucun message
-n'est jamais perdu silencieusement.
+Les messages en DLQ sont **conservés 30 jours en production (72 h en développement) et rejouables**
+après correction. Aucun message n'est jamais perdu silencieusement.
+
+### 5.1 Le contrat de la file de rebut
+
+La DLQ est un flux comme un autre : elle a son contrat,
+[`dlq/dead-letter-v1.avsc`](../../../data-platform/schemas/avro/dlq/dead-letter-v1.avsc), partagé par
+les onze `<topic>.dlq`. Il porte l'identifiant du rebut, l'instant du refus, le topic visé, le code et
+le motif, l'émetteur, le tenant s'il est lisible, la clé de partition d'origine (pour qu'un rejeu
+retombe sur la même partition) et le **message refusé en JSON** (un message invalide n'est pas
+forcément encodable dans son propre schéma).
+
+Deux règles :
+
+- le **motif ne contient jamais de valeur refusée**, seulement `champ : type d'erreur` ; les valeurs
+  restent dans la charge utile, qui contient des identifiants bruts et suit le régime d'accès des
+  topics (risque R8) ;
+- ce contrat n'est pas dérivé en modèle Pydantic (seul le publieur l'écrit), et le validateur
+  (`scripts/validate_contracts.py`) lui applique ses propres règles au lieu de l'enveloppe des
+  événements. Voir [ADR-022](../../adr/ADR-022-event-publisher.md).
 
 ---
 

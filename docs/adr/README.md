@@ -41,6 +41,7 @@ envisagées, la décision retenue et ses conséquences — y compris négatives.
 | [019](ADR-019-event-generators.md) | Générateurs d'événements déterministes, couplés par un modèle d'indicateurs, avec vérité terrain | ✅ Accepted | Données | 1 |
 | [020](ADR-020-core-runtime.md) | Socle d'exécution local : profil `core`, garde-fous vérifiés sans Docker | ✅ Accepted | Infrastructure | 1 |
 | [021](ADR-021-seaweedfs-replaces-minio.md) | SeaweedFS remplace MinIO derrière l'API S3 | ✅ Accepted | Stockage | 1 |
+| [022](ADR-022-event-publisher.md) | Publieur d'événements : valider avant d'envoyer, rejeter vers une file de rebut sous contrat | ✅ Accepted | Données | 1 |
 
 ## Décisions à réexaminer
 

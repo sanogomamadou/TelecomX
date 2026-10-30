@@ -14,6 +14,7 @@ c'est possible : une règle écrite est une suggestion, une règle contrôlée e
 .\make.ps1 setup        # outils, dépendances, hooks   (Linux/macOS : make setup)
 .\make.ps1 env          # crée .env et génère les secrets locaux (une fois)
 .\make.ps1 ci           # toute la chaîne de qualité en local
+.\make.ps1 test-integration   # tests contre la vraie pile (après up-core) ; un `pytest` nu les ignore
 .\make.ps1 help         # toutes les cibles
 ```
 
