@@ -1,0 +1,79 @@
+{
+  "type": "record",
+  "name": "DeadLetter",
+  "namespace": "com.telecomx.platform.v1",
+  "doc": "Un message refusé à la production, conservé avec son motif pour être examiné puis rejoué (FR-M1-008). Un seul contrat sert les onze files de rebut <topic>.dlq. Il n'est volontairement pas dérivé en modèle Pydantic : seul le publieur l'écrit et l'outil de rejeu le lit.",
+  "telecomx.owner": "data-platform",
+  "telecomx.topic": "<topic>.dlq",
+  "telecomx.compatibility": "BACKWARD",
+  "telecomx.classification": "P1",
+  "fields": [
+    {
+      "name": "dead_letter_id",
+      "type": "string",
+      "doc": "UUID v7 de ce message de rebut (pas celui de l'événement refusé, qui peut être absent ou invalide)."
+    },
+    {
+      "name": "rejected_at",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      },
+      "doc": "Instant du refus, en UTC."
+    },
+    {
+      "name": "source_topic",
+      "type": "string",
+      "doc": "Topic vers lequel l'événement était destiné. Le rejeu le republie ici."
+    },
+    {
+      "name": "rejection_code",
+      "type": {
+        "type": "enum",
+        "name": "RejectionCode",
+        "symbols": [
+          "SCHEMA_VIOLATION",
+          "CONSTRAINT_VIOLATION",
+          "MISSING_TENANT",
+          "SERIALIZATION_ERROR"
+        ]
+      },
+      "doc": "Famille du motif. SCHEMA_VIOLATION : champ absent, type ou symbole invalide. CONSTRAINT_VIOLATION : borne, format ou date future violés. MISSING_TENANT : tenant_id absent (ADR-016). SERIALIZATION_ERROR : le message passait la validation mais n'a pas pu être encodé en Avro (anomalie du publieur, à alerter)."
+    },
+    {
+      "name": "rejection_reason",
+      "type": "string",
+      "doc": "Motif lisible : noms de champs et types d'erreur uniquement, JAMAIS les valeurs refusées (elles contiennent des identifiants bruts et finiraient dans des journaux)."
+    },
+    {
+      "name": "producer_id",
+      "type": "string",
+      "doc": "Système émetteur de l'événement refusé, ou 'unknown' s'il est absent."
+    },
+    {
+      "name": "tenant_id",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Tenant de l'événement refusé, si lisible. Null quand le refus est précisément l'absence de tenant."
+    },
+    {
+      "name": "source_key",
+      "type": ["null", "bytes"],
+      "default": null,
+      "doc": "Clé de partition qu'aurait eu le message, pour qu'un rejeu retombe sur la même partition. Null si la clé est illisible."
+    },
+    {
+      "name": "raw_payload",
+      "type": "bytes",
+      "telecomx.pii": "direct",
+      "telecomx.transform": "retain_raw_30d",
+      "doc": "Le message refusé tel que reçu, en JSON UTF-8. Contient donc les identifiants bruts : même régime d'accès que les topics (risque R8 accepté), rétention plafonnée à 30 jours."
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0",
+      "doc": "Version de ce contrat."
+    }
+  ]
+}

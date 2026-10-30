@@ -5,10 +5,18 @@ description = "Deterministic synthetic data for the TelecomX platform: reference
 requires-python = ">=3.11"
 license = { text = "MIT" }
 
-# No third-party dependency of its own: it builds on telecom-common. Event generators
-# (lot 1.4) will add the Kafka producer client, and only then.
+# Reference data and event generation use only telecom-common. Publishing to Kafka is the
+# one place that needs outside libraries (lot 1.6), and they stay out of telecom-common
+# on purpose: that library is imported everywhere and must not carry a Kafka client
+# (enforced by .importlinter).
+#
+#   confluent-kafka  the Kafka producer (librdkafka: idempotence, acks=all, batching)
+#   fastavro         Avro binary encoding; the Schema Registry itself is reached with
+#                    the standard library, which keeps the dependency list short
 dependencies = [
     "telecom-common",
+    "confluent-kafka>=2.5",
+    "fastavro>=1.9",
 ]
 
 [tool.uv.sources]

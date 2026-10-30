@@ -47,6 +47,18 @@ ENVELOPE_FIELDS = {
     "tenant_id",
 }
 
+#: What a dead-letter message must carry (FR-M1-008): where it was going, why it was
+#: refused, who sent it, and the message itself so that it can be replayed.
+DLQ_REQUIRED_FIELDS = {
+    "dead_letter_id",
+    "rejected_at",
+    "source_topic",
+    "rejection_code",
+    "rejection_reason",
+    "producer_id",
+    "raw_payload",
+}
+
 REQUIRED_RECORD_METADATA = {
     "telecomx.owner",
     "telecomx.topic",
@@ -140,8 +152,13 @@ def validate_field(fld: dict[str, Any], report: ContractReport) -> None:
             )
 
 
-def validate_contract(path: Path) -> ContractReport:
-    """Validate a single .avsc file against JSON, Avro and governance rules."""
+def validate_contract(path: Path, *, dead_letter: bool = False) -> ContractReport:
+    """Validate a single .avsc file against JSON, Avro and governance rules.
+
+    ``dead_letter`` selects the rules of the dead-letter contract: it carries its own
+    fields (``DLQ_REQUIRED_FIELDS``) instead of the event envelope, since a rejected
+    message may have no valid envelope to speak of.
+    """
     report = ContractReport(path=path)
 
     try:
@@ -188,8 +205,16 @@ def validate_contract(path: Path) -> ContractReport:
         return report
 
     names = {f.get("name") for f in fields}
-    for missing in sorted(ENVELOPE_FIELDS - names):
-        report.errors.append(f"record: missing mandatory envelope field '{missing}' (FR-M1-006)")
+    if dead_letter:
+        for missing in sorted(DLQ_REQUIRED_FIELDS - names):
+            report.errors.append(f"record: missing dead-letter field '{missing}' (FR-M1-008)")
+        if schema.get("telecomx.topic") != "<topic>.dlq":
+            report.errors.append("record: a dead-letter contract must declare topic '<topic>.dlq'")
+    else:
+        for missing in sorted(ENVELOPE_FIELDS - names):
+            report.errors.append(
+                f"record: missing mandatory envelope field '{missing}' (FR-M1-006)"
+            )
 
     for fld in fields:
         validate_field(fld, report)
@@ -223,7 +248,15 @@ def main() -> int:
             "only JSON and governance rules are checked.\n\n"
         )
 
-    reports = [validate_contract(p) for p in contracts]
+    dead_letter_contracts = sorted((args.schema_dir / "dlq").glob("*.avsc"))
+    if not dead_letter_contracts:
+        sys.stderr.write(f"ERROR: no dead-letter contract in {args.schema_dir / 'dlq'}\n")
+        return 1
+
+    reports = [validate_contract(p) for p in contracts] + [
+        validate_contract(p, dead_letter=True) for p in dead_letter_contracts
+    ]
+    contracts = [*contracts, *dead_letter_contracts]
     failed = [r for r in reports if not r.ok]
     warned = [r for r in reports if r.warnings]
 
