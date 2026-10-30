@@ -92,6 +92,8 @@ $Targets = [ordered]@{
     'refdata'          = 'Regenerate the synthetic reference data (dbt seeds)'
     'refdata-check'    = 'Fail if the committed reference data is stale'
     'gen-events'       = 'Generate synthetic events to build/events (60 minutes)'
+    'register-schemas' = 'Register the Avro contracts in the Schema Registry (needs up-core)'
+    'publish-events'   = 'Generate and publish 60 minutes of events to Kafka (needs up-core)'
     'validate'         = 'Validate contracts, generated code freshness and architecture rules'
     'security'         = 'Run security scans (secrets, dependencies)'
     'ci'               = 'Run the full local CI pipeline'
@@ -216,6 +218,7 @@ switch ($Target) {
     'test-integration' {
         Write-Step 'Running integration tests'
         Invoke-Py @('pytest', '-m', 'integration')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
 
     'codegen' {
@@ -241,6 +244,18 @@ switch ($Target) {
     'refdata-check' {
         Write-Step 'Checking reference data is up to date'
         Invoke-Py @('python', '-m', 'telecomx_generators.reference', '--check')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+
+    'register-schemas' {
+        Write-Step 'Registering the Avro contracts in the Schema Registry'
+        Invoke-Py @('python', '-m', 'telecomx_generators.publish', 'register')
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+
+    'publish-events' {
+        Write-Step 'Publishing 60 minutes of events to Kafka'
+        Invoke-Py @('python', '-m', 'telecomx_generators.publish', 'run', '--duration-minutes', '60')
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
 

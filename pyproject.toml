@@ -144,6 +144,10 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "-ra",
+    # A bare `pytest` must work on a machine with no Docker. Integration tests need the
+    # running stack: ask for them explicitly with `-m integration` (a later -m wins).
+    "-m",
+    "not integration and not e2e and not llm",
 ]
 markers = [
     "unit: fast, no external dependency",

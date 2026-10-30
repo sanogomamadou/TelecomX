@@ -121,8 +121,7 @@ typecheck: ## Run mypy (strict on libs/, standard on generators)
 
 .PHONY: test
 test: ## Run unit tests with coverage
-	@uv run pytest -m "not integration and not e2e and not llm" --cov --cov-report=term-missing \
-		2>/dev/null || echo "==> No tests yet (Phase 1)"
+	@uv run pytest -m "not integration and not e2e and not llm" --cov --cov-report=term-missing
 
 .PHONY: test-integration
 test-integration: ## Run integration tests (requires running services)
@@ -150,6 +149,14 @@ refdata-check: ## Fail if the committed reference data is stale
 gen-events: ## Generate synthetic events to build/events (MINUTES=60 by default)
 	@uv run python -m telecomx_generators.events --duration-minutes $(or $(MINUTES),60) --out-dir build/events
 
+.PHONY: register-schemas
+register-schemas: ## Register the Avro contracts in the Schema Registry (needs make up-core)
+	@uv run python -m telecomx_generators.publish register
+
+.PHONY: publish-events
+publish-events: ## Generate and publish events to Kafka (MINUTES=60, POISON=0.0; needs make up-core)
+	@uv run python -m telecomx_generators.publish run --duration-minutes $(or $(MINUTES),60) --poison-fraction $(or $(POISON),0)
+
 # No `|| echo` fallbacks below: a check that cannot fail does not check anything.
 .PHONY: validate
 validate: ## Validate contracts, generated code freshness and architecture rules
@@ -165,9 +172,12 @@ validate: ## Validate contracts, generated code freshness and architecture rules
 .PHONY: security
 security: ## Run security scans (secrets, dependencies, images)
 	@echo "==> Scanning for secrets"
-	@gitleaks detect --no-banner --redact 2>/dev/null || echo "    gitleaks not installed — skipped"
+	@# `cmd || echo skipped` would also hide a real finding: test for the tool first, then let it fail.
+	@if command -v gitleaks >/dev/null 2>&1; then gitleaks detect --no-banner --redact; \
+		else echo "    gitleaks not installed — skipped (CI scans the whole history)"; fi
 	@echo "==> Auditing Python dependencies"
-	@uv run pip-audit 2>/dev/null || echo "    pip-audit not installed — skipped"
+	@if uv run pip-audit --version >/dev/null 2>&1; then uv run pip-audit; \
+		else echo "    pip-audit not installed — skipped (CI audits dependencies)"; fi
 
 .PHONY: ci
 ci: validate lint typecheck test security ## Run the full local CI pipeline
