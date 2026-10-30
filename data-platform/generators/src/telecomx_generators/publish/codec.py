@@ -81,4 +81,8 @@ class AvroCodec:
         except Exception as exc:
             msg = f"payload cannot be decoded with this schema: {type(exc).__name__}"
             raise CodecError(msg) from exc
-        return dict(record)
+        # Every contract is a record; say so rather than assume it.
+        if not isinstance(record, dict):
+            msg = "payload did not decode to a record"
+            raise CodecError(msg)
+        return {str(name): value for name, value in record.items()}

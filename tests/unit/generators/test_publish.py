@@ -365,6 +365,11 @@ class TestCodec:
         with pytest.raises(CodecError):
             codec.encode(record)
 
+    def test_a_schema_that_is_not_a_record_cannot_be_decoded_as_one(self) -> None:
+        codec = AvroCodec('{"type": "string"}')
+        with pytest.raises(CodecError, match="did not decode to a record"):
+            codec.decode(b"ab")  # Avro string "ab"
+
     def test_an_invalid_schema_is_refused(self) -> None:
         with pytest.raises(CodecError):
             AvroCodec('{"type": "record"}')
